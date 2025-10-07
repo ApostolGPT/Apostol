@@ -1,0 +1,68 @@
+{
+  "name": "cash-flow-game",
+  "version": "1.0.0",
+  "description": "Интерактивная веб-игра по мотивам настольной игры Роберта Кийосаки 'Денежный поток'",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "http-server -p 8000 -c-1",
+    "build": "npm run minify-css && npm run minify-js",
+    "minify-css": "cssnano styles.css styles.min.css",
+    "minify-js": "terser script.js -o script.min.js --compress --mangle",
+    "validate-html": "html-validate index.html",
+    "validate-css": "stylelint styles.css",
+    "lint-js": "eslint script.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "deploy": "surge . --domain cash-flow-game.surge.sh"
+  },
+  "keywords": [
+    "game",
+    "finance",
+    "education",
+    "cash-flow",
+    "robert-kiyosaki",
+    "financial-literacy",
+    "web-app",
+    "javascript",
+    "html5",
+    "css3"
+  ],
+  "author": {
+    "name": "Ужакин Алексей",
+    "email": "author@example.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/cash-flow-game.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/cash-flow-game/issues"
+  },
+  "homepage": "https://github.com/username/cash-flow-game#readme",
+  "devDependencies": {
+    "cssnano": "^6.0.1",
+    "terser": "^5.19.2",
+    "http-server": "^14.1.1",
+    "html-validate": "^8.2.0",
+    "stylelint": "^15.10.2",
+    "eslint": "^8.46.0",
+    "surge": "^0.23.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not ie 11"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.html",
+    "styles.css",
+    "script.js",
+    "manifest.json",
+    "README.md"
+  ]
+}

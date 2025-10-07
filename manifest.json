@@ -1,0 +1,40 @@
+{
+  "name": "Денежный поток - Игра Кийосаки",
+  "short_name": "Денежный поток",
+  "description": "Интерактивная веб-игра по мотивам настольной игры Роберта Кийосаки для изучения финансовой грамотности",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1e3a8a",
+  "background_color": "#667eea",
+  "lang": "ru",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxZTNhOGEiLz4KPHN2ZyB4PSIzMiIgeT0iMzIiIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiPgo8cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMlptMy4xNyAxMC4xMmMtLjE5LjA5LS4zOC4yMS0uNTIuMzZsLTMuOS0yLjdhLjc1Ljc1IDAgMDEtLjI1LS41NlY3YzAtLjQxLjMzLS43NS43NS0uNzVzLjc1LjM0Ljc1Ljc1djIuNjlsNCAyLjc4YzAtLjAyIDAtLjA1IDAtLjA3IDAtMi4yMS0xLjc5LTQTNDQ0IDEuNzktNCAxLjM4IDAgMi42Mi4yOSAzLjE3IDEuMjh6IiBmaWxsPSIjMTBiOTgxIi8+CjxwYXRoIGQ9Ik0xOCAxNC41YzAtLjgzLS42Ny0xLjUtMS41LTEuNVM5NS4zNSA5LjM1IDE2IDloMmMxLjE5IDAgMi4yMy0uNjQgMi44LTEuNjcuNTctMS4wMy41Ny0yLjMxIDAtMy4zM0MxOS4zNCAyLjQ3IDE3LjkzIDIgMTYuNSAyaDJjLS44MyAwLTEuNS42Ny0xLjUgMS41eiIgZmlsbD0iI2Y1OWUwYiIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMxZTNhOGEiLz4KPHN2ZyB4PSI4NiIgeT0iODYiIHdpZHRoPSIzNDAiIGhlaWdodD0iMzQwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiPgo8cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMlptMCAxOGMtNC40MSAwLTgtMy41OS04LThzMy41OS04IDgtOCA4IDMuNTkgOCA4LTMuNTkgOC04IDh6IiBmaWxsPSIjMTBiOTgxIi8+CjxwYXRoIGQ9Ik0xMi41IDdIMTFjLS41NSAwLTEgLjQ1LTEgMXYzSDkuNWMtLjgzIDAtMS41LjY3LTEuNSAxLjVzLjY3IDEuNSAxLjUgMS41SDEwdjNjMCAuNTUuNDUgMSAxIDFoMS41Yy41NSAwIDEtLjQ1IDEtMXYtM2gxLjVjLjgzIDAgMS41LS42NyAxLjUtMS41cy0uNjctMS41LTEuNS0xLjVIMTNWOGMwLS41NS0uNDUtMS0xLTEtLjI4IDAtLjUtLjIyLS41LS41eiIgZmlsbD0iI2Y1OWUwYiIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["education", "games", "finance"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIHZpZXdCb3g9IjAgMCAxMjgwIDcyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSJ1cmwoI2dyYWRpZW50KSIvPgo8ZGVmcz4KPGV0YWdyYWRpZW50IGlkPSJncmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM2NjdlZWEiLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLXNvbG9yPSIjNzY0YmEyIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPC9zdmc+",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ],
+  "features": [
+    "Cross Platform",
+    "VirtualKeyboard"
+  ],
+  "prefer_related_applications": false
+}
