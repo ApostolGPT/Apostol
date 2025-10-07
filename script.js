@@ -317,6 +317,14 @@ let gameData = {
   }
 };
 
+let cashFlowStage = 1;
+let stageTwoUnlocked = false;
+let stageTwoBasePassive = 0;
+let stageTwoInitialPassive = 0;
+let stageTwoAdditionalPassive = 0;
+let dreamPurchased = false;
+const STAGE_TWO_TARGET_INCREMENT = 50000;
+
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
   loadGameData();
@@ -339,13 +347,15 @@ function showScreen(screenNumber) {
   const screens = document.querySelectorAll('.screen');
   screens.forEach(screen => {
     screen.style.display = 'none';
+    screen.classList.remove('active');
   });
-  
+
   // Показать выбранный экран
   const targetScreen = document.getElementById(`screen${screenNumber}`);
   if (targetScreen) {
     targetScreen.style.display = 'block';
     targetScreen.classList.add('active');
+    window.scrollTo(0, 0);
   }
 }
 
@@ -478,7 +488,18 @@ function setupEventListeners() {
   if (password) {
     password.addEventListener('input', validateRegistration);
   }
-  
+
+  const dreamInput = document.getElementById('playerDream');
+  if (dreamInput) {
+    dreamInput.addEventListener('input', () => {
+      const stage2DreamDisplay = document.getElementById('stage2DreamDisplay');
+      if (stage2DreamDisplay) {
+        const dreamValue = dreamInput.value.trim() || '—';
+        stage2DreamDisplay.textContent = dreamValue;
+      }
+    });
+  }
+
   // Автосохранение каждые 30 секунд
   setInterval(saveGameData, 30000);
 }
@@ -487,42 +508,140 @@ function setupEventListeners() {
 
 function initializeCashFlowGame() {
   if (!selectedProfession) return;
-  
+
   // Инициализация игровых данных
   gameData.wallet = selectedProfession.savings;
   gameData.expenses = { ...selectedProfession.expenses };
   gameData.passiveIncome = 0;
   gameData.children = 0;
-  
+
+  // Настройки этапов
+  cashFlowStage = 1;
+  stageTwoUnlocked = false;
+  stageTwoBasePassive = 0;
+  stageTwoInitialPassive = 0;
+  stageTwoAdditionalPassive = 0;
+  dreamPurchased = false;
+
+  const stage2Button = document.getElementById('stage2Button');
+  if (stage2Button) {
+    stage2Button.disabled = true;
+    stage2Button.classList.remove('active');
+  }
+
+  const stage1Button = document.getElementById('stage1Button');
+  if (stage1Button) {
+    stage1Button.classList.add('active');
+  }
+
+  const dreamCheckbox = document.getElementById('dreamPurchased');
+  if (dreamCheckbox) {
+    dreamCheckbox.checked = false;
+  }
+
+  const stage2Input = document.getElementById('stage2PassiveInput');
+  if (stage2Input) {
+    stage2Input.value = '';
+  }
+
+  const childrenInput = document.getElementById('childrenCount');
+  if (childrenInput) {
+    childrenInput.value = 0;
+  }
+  const childrenExpenseDisplay = document.getElementById('childrenExpensesAmount');
+  if (childrenExpenseDisplay) {
+    childrenExpenseDisplay.textContent = '0';
+  }
+
+  const stage2Status = document.getElementById('stage2GoalStatus');
+  if (stage2Status) {
+    stage2Status.textContent = 'Цель пока не достигнута.';
+    stage2Status.classList.remove('success', 'warning');
+  }
+
+  const stage2List = document.getElementById('stage2PassiveList');
+  if (stage2List) {
+    stage2List.innerHTML = '';
+  }
+
+  const stage2Base = document.getElementById('stage2BasePassive');
+  if (stage2Base) stage2Base.textContent = '0';
+
+  const stage2Passive = document.getElementById('stage2PassiveIncome');
+  if (stage2Passive) stage2Passive.textContent = '0';
+
+  const stage2Wallet = document.getElementById('stage2WalletAmount');
+  if (stage2Wallet) stage2Wallet.textContent = '0';
+
+  const stage2Total = document.getElementById('stage2TotalPassive');
+  if (stage2Total) stage2Total.textContent = '0';
+
+  const stage2Target = document.getElementById('stage2TargetIncome');
+  if (stage2Target) stage2Target.textContent = STAGE_TWO_TARGET_INCREMENT.toLocaleString();
+
+  showCashflowStage(1);
+
   // Обновление интерфейса
   updateCashFlowDisplay();
 }
 
 function updateCashFlowDisplay() {
   if (!selectedProfession) return;
-  
+
   // Обновить название профессии
   document.getElementById('selectedProfession').textContent = selectedProfession.name;
-  
+
+  const stageLabel = document.getElementById('cashflowStageLabel');
+  if (stageLabel) {
+    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиный бег' : 'Этап 2: Быстрый трек';
+  }
+
+  const nickname = currentUser?.nickname || 'Гость';
+  const nicknameDisplay = document.getElementById('playerNicknameDisplay');
+  if (nicknameDisplay) {
+    nicknameDisplay.textContent = nickname;
+  }
+
+  const professionDisplay = document.getElementById('stage1ProfessionName');
+  if (professionDisplay) {
+    professionDisplay.textContent = selectedProfession.name;
+  }
+
+  const dreamInput = document.getElementById('playerDream');
+  const stage2DreamDisplay = document.getElementById('stage2DreamDisplay');
+  if (stage2DreamDisplay) {
+    const dreamValue = dreamInput && dreamInput.value.trim() ? dreamInput.value.trim() : '—';
+    stage2DreamDisplay.textContent = dreamValue;
+  }
+
   // Обновить основные показатели
-  document.getElementById('walletAmount').textContent = `$${gameData.wallet}`;
-  document.getElementById('passiveIncomeAmount').textContent = `$${gameData.passiveIncome}`;
-  document.getElementById('salaryAmount').textContent = `$${selectedProfession.salary}`;
-  
+  document.getElementById('walletAmount').textContent = `$${gameData.wallet.toLocaleString()}`;
+  document.getElementById('passiveIncomeAmount').textContent = `$${gameData.passiveIncome.toLocaleString()}`;
+  document.getElementById('salaryAmount').textContent = `$${selectedProfession.salary.toLocaleString()}`;
+
   // Обновить расходы
   updateExpensesDisplay();
-  
-  // Обновить денежный поток
-  updateCashFlow();
-  
+  renderLiabilities();
+  updateTotalExpenses();
+
+  // Пересчитать доходы
+  updateTotalIncome();
+
   // Обновить доступный кредит
   updateAvailableCredit();
+
+  // Обновить кнопку этапов
+  updateStageButtons();
+
+  if (stageTwoUnlocked) {
+    updateStage2Display();
+  }
 }
 
 function updateExpensesDisplay() {
   const fixedExpensesContainer = document.getElementById('fixedExpenses');
   if (!fixedExpensesContainer || !selectedProfession) return;
-  
+
   const expenseLabels = {
     taxes: 'Налоги',
     homePayment: 'Оплата залога/аренды',
@@ -541,10 +660,35 @@ function updateExpensesDisplay() {
       expenseItem.className = 'expense-item';
       expenseItem.innerHTML = `
         <label>${expenseLabels[key]}:</label>
-        <span>$${value}</span>
+        <span>$${value.toLocaleString()}</span>
       `;
       fixedExpensesContainer.appendChild(expenseItem);
     }
+  });
+}
+
+function renderLiabilities() {
+  const liabilitiesContainer = document.getElementById('liabilitiesList');
+  if (!liabilitiesContainer || !selectedProfession) return;
+
+  const liabilityLabels = {
+    homeMortgage: 'Ипотека на дом',
+    schoolLoan: 'Кредит на обучение',
+    carLoan: 'Кредит на автомобиль',
+    creditCards: 'Кредитные карты',
+    retailDebt: 'Розничные долги'
+  };
+
+  liabilitiesContainer.innerHTML = '';
+
+  Object.entries(selectedProfession.liabilities || {}).forEach(([key, value]) => {
+    const item = document.createElement('div');
+    item.className = 'liability-item';
+    item.innerHTML = `
+      <span>${liabilityLabels[key] || key}</span>
+      <span>$${value}</span>
+    `;
+    liabilitiesContainer.appendChild(item);
   });
 }
 
@@ -566,25 +710,25 @@ function updateTotalIncome() {
   
   totalIncome += investments + dividends + realEstateBusiness + businessIncome1 + businessIncome2;
   totalIncome += gameData.passiveIncome;
-  
-  document.getElementById('totalIncomeAmount').textContent = totalIncome.toFixed(0);
-  
+
+  document.getElementById('totalIncomeAmount').textContent = totalIncome.toLocaleString();
+
   updateCashFlow();
 }
 
 function updateChildrenExpenses() {
   const childrenCount = parseInt(document.getElementById('childrenCount').value) || 0;
   gameData.children = childrenCount;
-  
+
   const childExpense = childrenCount * selectedProfession.expenses.childExpensePerChild;
-  document.getElementById('childrenExpensesAmount').textContent = childExpense;
-  
+  document.getElementById('childrenExpensesAmount').textContent = childExpense.toLocaleString();
+
   updateTotalExpenses();
 }
 
 function updateTotalExpenses() {
   if (!selectedProfession) return;
-  
+
   let totalExpenses = 0;
   
   // Фиксированные расходы
@@ -597,28 +741,197 @@ function updateTotalExpenses() {
   // Детские расходы
   totalExpenses += gameData.children * selectedProfession.expenses.childExpensePerChild;
   
-  document.getElementById('totalExpensesAmount').textContent = totalExpenses;
-  
+  document.getElementById('totalExpensesAmount').textContent = totalExpenses.toLocaleString();
+
   updateCashFlow();
   return totalExpenses;
 }
 
 function updateCashFlow() {
-  const totalIncome = parseFloat(document.getElementById('totalIncomeAmount').textContent) || 0;
-  const totalExpenses = parseFloat(document.getElementById('totalExpensesAmount').textContent) || 0;
-  
+  const totalIncomeText = document.getElementById('totalIncomeAmount').textContent;
+  const totalExpensesText = document.getElementById('totalExpensesAmount').textContent;
+
+  const totalIncome = parseNumeric(totalIncomeText);
+  const totalExpenses = parseNumeric(totalExpensesText);
+
   const cashFlow = totalIncome - totalExpenses;
-  document.getElementById('cashFlowAmount').textContent = `$${cashFlow}`;
+  document.getElementById('cashFlowAmount').textContent = `$${cashFlow.toLocaleString()}`;
   document.getElementById('cashFlowAmount').style.color = cashFlow >= 0 ? '#10b981' : '#ef4444';
-  
+
   // Проверить возможность перехода на второй круг
   checkSecondRound();
 }
 
 function updateAvailableCredit() {
-  const cashFlow = parseFloat(document.getElementById('cashFlowAmount').textContent.replace('$', '')) || 0;
-  const availableCredit = Math.max(0, cashFlow * 10);
-  document.getElementById('availableCredit').textContent = availableCredit.toFixed(0);
+  const cashFlowText = document.getElementById('cashFlowAmount').textContent;
+  const cashFlow = parseNumeric(cashFlowText);
+  const availableCredit = Math.max(0, Math.round(cashFlow * 10));
+  document.getElementById('availableCredit').textContent = availableCredit.toLocaleString();
+}
+
+function parseNumeric(value) {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  const normalized = value.toString().replace(/[^0-9.-]/g, '');
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+function showCashflowStage(stage) {
+  if (stage === 2 && !stageTwoUnlocked) {
+    return;
+  }
+
+  cashFlowStage = stage;
+
+  const stage1Form = document.getElementById('stage1Form');
+  const stage2Form = document.getElementById('stage2Form');
+  if (stage1Form) {
+    stage1Form.classList.toggle('active', stage === 1);
+  }
+  if (stage2Form) {
+    stage2Form.classList.toggle('active', stage === 2);
+  }
+
+  updateCashFlowDisplay();
+}
+
+function updateStageButtons() {
+  const stage1Button = document.getElementById('stage1Button');
+  const stage2Button = document.getElementById('stage2Button');
+
+  if (stage1Button) {
+    stage1Button.classList.toggle('active', cashFlowStage === 1);
+  }
+
+  if (stage2Button) {
+    stage2Button.disabled = !stageTwoUnlocked;
+    stage2Button.classList.toggle('active', cashFlowStage === 2);
+  }
+
+  const stageLabel = document.getElementById('cashflowStageLabel');
+  if (stageLabel) {
+    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиный бег' : 'Этап 2: Быстрый трек';
+  }
+}
+
+function updateStage2Display() {
+  const passiveList = document.getElementById('stage2PassiveList');
+  if (!passiveList) return;
+
+  const basePassive = stageTwoBasePassive;
+  const fastTrackPassive = stageTwoInitialPassive;
+  const additionalPassive = stageTwoAdditionalPassive;
+
+  const baseElement = document.getElementById('stage2BasePassive');
+  if (baseElement) {
+    baseElement.textContent = basePassive.toLocaleString();
+  }
+
+  const passiveIncomeElement = document.getElementById('stage2PassiveIncome');
+  if (passiveIncomeElement) {
+    passiveIncomeElement.textContent = fastTrackPassive.toLocaleString();
+  }
+
+  const walletElement = document.getElementById('stage2WalletAmount');
+  if (walletElement) {
+    walletElement.textContent = gameData.wallet.toLocaleString();
+  }
+
+  const totalPassiveElement = document.getElementById('stage2TotalPassive');
+  if (totalPassiveElement) {
+    totalPassiveElement.textContent = getStageTwoPassiveIncome().toLocaleString();
+  }
+
+  const targetElement = document.getElementById('stage2TargetIncome');
+  if (targetElement) {
+    targetElement.textContent = (stageTwoInitialPassive + STAGE_TWO_TARGET_INCREMENT).toLocaleString();
+  }
+
+  passiveList.innerHTML = '';
+
+  const baseItem = document.createElement('li');
+  baseItem.innerHTML = `<span>Пассивный доход этапа 1</span><span>$${basePassive.toLocaleString()}</span>`;
+  passiveList.appendChild(baseItem);
+
+  const scaledItem = document.createElement('li');
+  scaledItem.innerHTML = `<span>Быстрый трек (×100)</span><span>$${fastTrackPassive.toLocaleString()}</span>`;
+  passiveList.appendChild(scaledItem);
+
+  const additionalItem = document.createElement('li');
+  additionalItem.innerHTML = `<span>Дополнительный пассивный доход этапа 2</span><span>$${additionalPassive.toLocaleString()}</span>`;
+  passiveList.appendChild(additionalItem);
+
+  updateStageGoalStatus();
+}
+
+function getStageTwoPassiveIncome() {
+  return stageTwoInitialPassive + stageTwoAdditionalPassive;
+}
+
+function addStageTwoPassiveIncome() {
+  if (!stageTwoUnlocked) {
+    showModal('Этап 2 недоступен', 'Сначала завершите цели первого этапа.');
+    return;
+  }
+
+  const input = document.getElementById('stage2PassiveInput');
+  const amount = parseFloat(input?.value);
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму пассивного дохода.');
+    return;
+  }
+
+  stageTwoAdditionalPassive += amount;
+  if (input) {
+    input.value = '';
+  }
+
+  updateStage2Display();
+  updateStageGoalStatus();
+
+  showModal('Пассивный доход добавлен', `+$${amount.toLocaleString()}`);
+}
+
+function toggleDreamPurchase() {
+  if (!stageTwoUnlocked) return;
+
+  const checkbox = document.getElementById('dreamPurchased');
+  dreamPurchased = checkbox ? checkbox.checked : false;
+  updateStageGoalStatus();
+}
+
+function updateStageGoalStatus() {
+  const status = document.getElementById('stage2GoalStatus');
+  if (!status) return;
+
+  if (!stageTwoUnlocked) {
+    status.classList.remove('success', 'warning');
+    status.textContent = 'Цель пока не достигнута.';
+    return;
+  }
+
+  const targetPassive = stageTwoInitialPassive + STAGE_TWO_TARGET_INCREMENT;
+  const currentPassive = getStageTwoPassiveIncome();
+
+  status.classList.remove('success', 'warning');
+
+  if (dreamPurchased) {
+    status.textContent = 'Поздравляем! Мечта куплена — победа достигнута!';
+    status.classList.add('success');
+    return;
+  }
+
+  if (currentPassive >= targetPassive) {
+    status.textContent = 'Цель достигнута! Пассивный доход увеличен на $50 000 и более.';
+    status.classList.add('success');
+    return;
+  }
+
+  const remaining = targetPassive - currentPassive;
+  status.textContent = `Цель пока не достигнута. Увеличьте пассивный доход еще на $${remaining.toLocaleString()}.`;
+  status.classList.add('warning');
 }
 
 function addIncome() {
@@ -629,15 +942,16 @@ function addIncome() {
     showModal('Ошибка', 'Введите корректную сумму дохода');
     return;
   }
-  
+
   gameData.wallet += amount;
   updateCashFlowDisplay();
-  
+
   // Очистить поля
   document.getElementById('transactionAmount').value = '';
   document.getElementById('transactionNote').value = '';
-  
-  showModal('Доход добавлен', `+$${amount}${note ? ` (${note})` : ''}`);
+
+  const formattedAmount = amount.toLocaleString();
+  showModal('Доход добавлен', `+$${formattedAmount}${note ? ` (${note})` : ''}`);
 }
 
 function addExpense() {
@@ -656,26 +970,29 @@ function addExpense() {
   
   gameData.wallet -= amount;
   updateCashFlowDisplay();
-  
+
   // Очистить поля
   document.getElementById('transactionAmount').value = '';
   document.getElementById('transactionNote').value = '';
-  
-  showModal('Расход добавлен', `-$${amount}${note ? ` (${note})` : ''}`);
+
+  const formattedAmount = amount.toLocaleString();
+  showModal('Расход добавлен', `-$${formattedAmount}${note ? ` (${note})` : ''}`);
 }
 
 function takeCredit() {
-  const availableCredit = parseFloat(document.getElementById('availableCredit').textContent);
-  
+  const availableCredit = parseNumeric(document.getElementById('availableCredit').textContent);
+
   if (availableCredit <= 0) {
     showModal('Ошибка', 'У вас отрицательный денежный поток. Кредит недоступен.');
     return;
   }
-  
-  if (confirm(`Взять кредит на сумму $${availableCredit}?`)) {
+
+  const formattedCredit = availableCredit.toLocaleString();
+
+  if (confirm(`Взять кредит на сумму $${formattedCredit}?`)) {
     gameData.wallet += availableCredit;
     updateCashFlowDisplay();
-    showModal('Кредит получен', `+$${availableCredit}`);
+    showModal('Кредит получен', `+$${formattedCredit}`);
   }
 }
 
@@ -806,21 +1123,41 @@ function addBusiness(button) {
 }
 
 function checkSecondRound() {
-  const totalExpenses = updateTotalExpenses();
-  
-  if (gameData.passiveIncome > totalExpenses + 10) {
-    document.getElementById('secondRoundNotification').style.display = 'flex';
+  if (stageTwoUnlocked || !selectedProfession) return;
+
+  const notification = document.getElementById('secondRoundNotification');
+  if (!notification) return;
+
+  const totalExpenses = parseNumeric(document.getElementById('totalExpensesAmount').textContent) || 0;
+  const childBuffer = selectedProfession.expenses.childExpensePerChild || 0;
+
+  if (gameData.passiveIncome >= totalExpenses + childBuffer && totalExpenses > 0) {
+    notification.style.display = 'flex';
   }
 }
 
 function goToSecondRound() {
-  // Переход на второй круг Cash Flow
-  const newSalary = gameData.passiveIncome * 100;
-  
-  showModal('Второй круг!', `Ваша новая зарплата: $${newSalary.toLocaleString()}`);
-  document.getElementById('secondRoundNotification').style.display = 'none';
-  
-  // Здесь можно добавить логику второго круга
+  const notification = document.getElementById('secondRoundNotification');
+  if (notification) {
+    notification.style.display = 'none';
+  }
+
+  stageTwoUnlocked = true;
+  stageTwoBasePassive = gameData.passiveIncome;
+  stageTwoInitialPassive = stageTwoBasePassive * 100;
+  stageTwoAdditionalPassive = 0;
+  dreamPurchased = false;
+
+  const stage2Button = document.getElementById('stage2Button');
+  if (stage2Button) {
+    stage2Button.disabled = false;
+  }
+
+  showModal('Быстрый трек!', `Ваш пассивный доход масштабирован до $${stageTwoInitialPassive.toLocaleString()}.`);
+
+  showCashflowStage(2);
+  updateStage2Display();
+  updateStageButtons();
 }
 
 // === СЕКРЕТ ДЕНЕГ ИГРА ===
