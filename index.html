@@ -128,7 +128,7 @@
             <header class="game-header">
                 <div class="header-left">
                     <h1>Денежный поток</h1>
-                    <div class="stage-label" id="cashflowStageLabel">Этап 1: Крысиный бег</div>
+                    <div class="stage-label" id="cashflowStageLabel">Этап 1: Крысиные гонки</div>
                 </div>
                 <div class="profession-name" id="selectedProfession">Офицер ГИБДД</div>
                 <div class="header-actions">
@@ -159,7 +159,7 @@
                 <div class="stage-form active" id="stage1Form">
                     <div class="stage-header">
                         <div class="stage-objective">
-                            <h2>Цель этапа 1 — выйти из «Крысиный бег»</h2>
+                            <h2>Цель этапа 1 — выйти из «крысиных гонок» на быстрый путь</h2>
                             <ol>
                                 <li>Увеличьте пассивный доход до уровня выше ваших расходов.</li>
                                 <li>Обеспечьте запас: пассивный доход должен покрывать расходы даже с учетом рождения ребенка.</li>
@@ -193,6 +193,10 @@
                                 <div class="income-row">
                                     <span>Заработная плата</span>
                                     <strong id="salaryAmount">$0</strong>
+                                </div>
+                                <div class="income-row income-freed">
+                                    <span>Освобожденные платежи</span>
+                                    <strong id="freedCashFlowAmount">$0</strong>
                                 </div>
                                 <div class="income-input">
                                     <label>Капиталовложения</label>
@@ -253,15 +257,7 @@
                                             <th>Действие</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="stocksTableBody">
-                                        <tr>
-                                            <td><input type="text" placeholder="Название актива"></td>
-                                            <td><input type="number" placeholder="Количество"></td>
-                                            <td><input type="number" placeholder="Цена"></td>
-                                            <td><input type="number" placeholder="Месячный доход"></td>
-                                            <td><button onclick="addStock(this)">Купить</button></td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="stocksTableBody"></tbody>
                                 </table>
                             </div>
                             <div class="assets-section">
@@ -276,15 +272,7 @@
                                             <th>Действие</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="realEstateTableBody">
-                                        <tr>
-                                            <td><input type="text" placeholder="Название недвижимости"></td>
-                                            <td><input type="number" placeholder="Первый взнос"></td>
-                                            <td><input type="number" placeholder="Полная цена"></td>
-                                            <td><input type="number" placeholder="Месячный доход"></td>
-                                            <td><button onclick="addRealEstate(this)">Купить</button></td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="realEstateTableBody"></tbody>
                                 </table>
                             </div>
                             <div class="assets-section">
@@ -299,15 +287,7 @@
                                             <th>Действие</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="businessTableBody">
-                                        <tr>
-                                            <td><input type="text" placeholder="Название бизнеса"></td>
-                                            <td><input type="number" placeholder="Первый взнос"></td>
-                                            <td><input type="number" placeholder="Полная цена"></td>
-                                            <td><input type="number" placeholder="Месячный доход"></td>
-                                            <td><button onclick="addBusiness(this)">Купить</button></td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="businessTableBody"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -331,6 +311,10 @@
                                     <p>Доступная сумма: $<span id="availableCredit">0</span></p>
                                     <button onclick="takeCredit()" class="credit-btn">Взять кредит</button>
                                 </div>
+                                <div class="loan-tracker">
+                                    <h4>Активные кредиты</h4>
+                                    <div id="loansList" class="loans-list"></div>
+                                </div>
                             </section>
                         </div>
                     </div>
@@ -339,7 +323,7 @@
                 <div class="stage-form" id="stage2Form">
                     <div class="fast-track-header">
                         <div class="fast-track-message">
-                            <h2>Поздравляем! Вы выбрались из «Крысиный поток»!</h2>
+                            <h2>Поздравляем! Вы выбрались из «крысиных гонок»!</h2>
                             <p>Теперь начинается быстрый трек. Ваш пассивный доход масштабируется, а цели становятся смелее.</p>
                             <ol>
                                 <li>Купите мечту, выбранную на первом этапе.</li>
@@ -349,44 +333,56 @@
                         </div>
                         <div class="fast-track-stats">
                             <div class="stat-item">
-                                <span>Новый пассивный доход</span>
-                                <strong>$<span id="stage2PassiveIncome">0</span></strong>
-                                <small>100 × пассивного дохода этапа 1</small>
-                            </div>
-                            <div class="stat-item">
-                                <span>Стартовый пассивный доход этапа 1</span>
+                                <span>Стартовый пассивный доход (этап 1)</span>
                                 <strong>$<span id="stage2BasePassive">0</span></strong>
                             </div>
                             <div class="stat-item">
-                                <span>Кошелек</span>
+                                <span>Масштабированный доход быстрого трека</span>
+                                <strong>$<span id="stage2PassiveIncome">0</span></strong>
+                                <small>×100 от пассивного дохода этапа 1</small>
+                            </div>
+                            <div class="stat-item">
+                                <span>Текущий кошелек</span>
                                 <strong>$<span id="stage2WalletAmount">0</span></strong>
                             </div>
                         </div>
                     </div>
 
                     <div class="fast-track-body">
-                        <div class="fast-track-report">
-                            <h3>Пассивные доходы быстрого трека</h3>
-                            <ul id="stage2PassiveList"></ul>
-                            <div class="total-line">Итоговый пассивный доход: $<span id="stage2TotalPassive">0</span></div>
-                        </div>
-                        <div class="fast-track-goals">
-                            <h3>Цели этапа 2</h3>
-                            <p>Достигните мечты или доведите пассивный доход до целевых $<span id="stage2TargetIncome">50000</span>.</p>
-                            <div class="dream-display">Выбранная мечта: <span id="stage2DreamDisplay">—</span></div>
-                            <div class="goal-actions">
-                                <label class="checkbox">
-                                    <input type="checkbox" id="dreamPurchased" onchange="toggleDreamPurchase()">
-                                    <span>Мечта куплена</span>
-                                </label>
-                                <div class="additional-passive">
-                                    <label>Добавить пассивный доход этапа 2</label>
-                                    <input type="number" id="stage2PassiveInput" placeholder="Сумма">
-                                    <button onclick="addStageTwoPassiveIncome()">Добавить</button>
-                                </div>
+                        <section class="fast-track-report">
+                            <h3>Финансовый отчет быстрого трека</h3>
+                            <p class="report-intro">Начальный пассивный доход: $<span id="stage2PassiveIncome">0</span></p>
+                            <table class="fast-track-table">
+                                <thead>
+                                    <tr>
+                                        <th>Бизнес</th>
+                                        <th>Доходность в месяц</th>
+                                        <th>Суммарный пассивный доход</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stage2ReportBody"></tbody>
+                            </table>
+                            <div class="salary-controls">
+                                <button id="stage2SalaryButton" onclick="collectFastTrackSalary()">Зарплата</button>
+                                <button id="stage2ExpenseButton" onclick="recordFastTrackExpense()">Расход</button>
+                                <div class="salary-hint">Текущий суммарный пассивный доход: $<span id="stage2TotalPassive">0</span></div>
                             </div>
-                            <div class="goal-status" id="stage2GoalStatus">Цель пока не достигнута.</div>
-                        </div>
+                        </section>
+                        <section class="fast-track-goals">
+                            <h3>Цели этапа 2</h3>
+                            <div class="goal-card gold" id="passiveGoalCard">
+                                <div class="goal-header">Увеличьте пассивный доход минимум на $50 000</div>
+                                <p class="goal-target">Цель: $<span id="stage2TargetIncome">50000</span></p>
+                                <p>Прирост: $<span id="stage2IncreaseAmount">0</span></p>
+                                <button id="passiveGoalButton" onclick="confirmPassiveGoal()" disabled>Подтвердить достижение</button>
+                            </div>
+                            <div class="goal-card dream" id="dreamGoalCard">
+                                <div class="goal-header">Мечта игрока</div>
+                                <p class="dream-text" id="stage2DreamDisplay">—</p>
+                                <button id="dreamGoalButton" onclick="confirmDreamGoal()" disabled>Подтвердить мечту</button>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>

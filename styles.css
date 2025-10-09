@@ -627,6 +627,15 @@ body {
   font-weight: 600;
 }
 
+.income-freed {
+  background: #ecfdf5;
+  border: 1px dashed #34d399;
+}
+
+.income-freed strong {
+  color: #047857;
+}
+
 .total-line {
   margin-top: auto;
   background: var(--primary-color);
@@ -713,6 +722,31 @@ body {
   background: #0d9f6c;
 }
 
+.assets-table button.outline {
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.assets-table button.outline:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.buy-btn {
+  background: var(--success-color);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.buy-btn:hover {
+  background: #0d9f6c;
+}
+
 .liabilities-list {
   display: flex;
   flex-direction: column;
@@ -731,17 +765,112 @@ body {
 
 .liability-item {
   background: #fef2f2;
+  border: 1px solid #fecaca;
   border-left: 4px solid var(--danger-color);
-  padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.liability-item span:last-child {
+.liability-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.liability-name {
   font-weight: 600;
   color: var(--danger-color);
+  font-size: 1rem;
+}
+
+.liability-balance,
+.liability-progress,
+.liability-payment {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.liability-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.liability-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.liability-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.liability-group input {
+  width: 160px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+  background: white;
+}
+
+.liability-group button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--danger-color);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.liability-group button:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.liability-group button.outline {
+  background: transparent;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+}
+
+.liability-group button.outline:hover {
+  background: var(--danger-color);
+  color: white;
+}
+
+.liability-freed {
+  font-weight: 600;
+  color: #047857;
+}
+
+.liability-closed {
+  background: #f1f5f9;
+  border-color: #cbd5f5;
+  border-left-color: #64748b;
+}
+
+.liability-closed .liability-name {
+  color: #475569;
+}
+
+.liability-empty {
+  background: #f8fafc;
+  border: 1px dashed #cbd5f5;
+  padding: 14px;
+  border-radius: 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .transaction-panel h4,
@@ -799,6 +928,104 @@ body {
 
 .credit-btn:hover {
   background: #1e40af;
+}
+
+.loan-tracker {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loan-tracker h4 {
+  margin: 0;
+  font-family: 'Roboto Slab', serif;
+  color: var(--primary-color);
+}
+
+.loans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loan-item {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loan-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.loan-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.loan-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.loan-controls input {
+  width: 160px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+}
+
+.loan-controls button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.loan-controls button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(79, 70, 229, 0.2);
+}
+
+.loan-controls button.outline {
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.loan-controls button.outline:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.loan-empty {
+  background: #f8fafc;
+  border: 1px dashed #cbd5f5;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .fast-track-header {
@@ -873,108 +1100,184 @@ body {
   border-radius: 12px;
   padding: 25px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .fast-track-report h3,
 .fast-track-goals h3 {
   font-family: 'Roboto Slab', serif;
   color: var(--primary-color);
-  margin-bottom: 15px;
+  margin-bottom: 5px;
 }
 
-.fast-track-report ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.fast-track-report li {
-  background: #f9fafb;
-  padding: 12px 16px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
+.report-intro {
   color: var(--text-secondary);
 }
 
-.fast-track-goals p {
-  color: var(--text-secondary);
-  margin-bottom: 15px;
+.fast-track-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.dream-display {
-  background: #eef2ff;
-  border-left: 4px solid var(--primary-color);
-  padding: 10px 14px;
-  border-radius: 10px;
-  color: var(--primary-color);
-  font-weight: 500;
-  margin-bottom: 15px;
-}
-
-.goal-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
-  color: var(--text-secondary);
-}
-
-.checkbox input {
-  width: 18px;
-  height: 18px;
-}
-
-.additional-passive {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.additional-passive input {
+.fast-track-table th,
+.fast-track-table td {
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
 }
 
-.additional-passive button {
-  background: var(--success-color);
-  color: white;
+.fast-track-table th {
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.fast-track-table td:last-child {
+  text-align: center;
+}
+
+.salary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.salary-controls button {
+  padding: 10px 16px;
   border: none;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.goal-status {
-  background: #f9fafb;
-  border-left: 4px solid var(--primary-color);
-  padding: 12px 16px;
-  border-radius: 10px;
+#stage2SalaryButton {
+  background: var(--success-color);
+  color: white;
+}
+
+#stage2SalaryButton:hover {
+  background: #0d9f6c;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(16, 185, 129, 0.2);
+}
+
+#stage2ExpenseButton {
+  background: var(--danger-color);
+  color: white;
+}
+
+#stage2ExpenseButton:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(239, 68, 68, 0.2);
+}
+
+.salary-hint {
   color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
-.goal-status.success {
-  background: #ecfdf5;
-  border-left-color: var(--success-color);
-  color: var(--success-color);
+.fast-track-goals {
+  gap: 18px;
 }
 
-.goal-status.warning {
-  background: #fef2f2;
-  border-left-color: var(--danger-color);
-  color: var(--danger-color);
+.goal-card {
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  padding: 18px;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+}
+
+.goal-card.gold {
+  border-color: #facc15;
+  background: #fefce8;
+}
+
+.goal-card.dream {
+  border-color: #f9a8d4;
+  background: #fdf2f8;
+}
+
+.goal-card .goal-header {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.goal-card p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.goal-card button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--primary-color);
+  color: white;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.goal-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.goal-card button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.25);
+}
+
+.goal-card.ready {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), 0 18px 35px rgba(79, 70, 229, 0.12);
+}
+
+.goal-card.completed {
+  opacity: 0.85;
+}
+
+.goal-card.celebrate::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid transparent;
+  animation: goal-border 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+.goal-card.gold.celebrate::after {
+  border-color: rgba(250, 204, 21, 0.75);
+}
+
+.goal-card.dream.celebrate::after {
+  border-color: rgba(236, 72, 153, 0.75);
+}
+
+@keyframes goal-border {
+  0% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
 }
 
 .second-round-notification {
