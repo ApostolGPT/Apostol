@@ -12,7 +12,7 @@
     <!-- ЭКРАН 1: Приветствие -->
     <div class="screen" id="screen1" style="display: block;">
         <div class="welcome-container">
-            <div class="version">v1.0.0</div>
+            <div class="version" id="appVersion">v1.1.0</div>
             <div class="welcome-content">
                 <h1 class="main-title">ДЕНЕЖНЫЙ ПОТОК</h1>
                 <h2 class="subtitle">По мотивам игры Роберта Кийосаки</h2>
@@ -126,188 +126,276 @@
     <div class="screen" id="screen6">
         <div class="game-screen">
             <header class="game-header">
-                <h1>Денежный поток</h1>
+                <div class="header-left">
+                    <h1>Денежный поток</h1>
+                    <div class="stage-label" id="cashflowStageLabel">Этап 1: Крысиный бег</div>
+                </div>
                 <div class="profession-name" id="selectedProfession">Офицер ГИБДД</div>
-                <button class="back-button" onclick="navigateToScreen(4)">
-                    <i class="fas fa-arrow-left"></i> Назад
-                </button>
+                <div class="header-actions">
+                    <button class="stage-toggle active" id="stage1Button" onclick="showCashflowStage(1)">Этап 1</button>
+                    <button class="stage-toggle" id="stage2Button" onclick="showCashflowStage(2)" disabled>Этап 2</button>
+                    <button class="back-button" onclick="navigateToScreen(4)">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                </div>
             </header>
 
-            <div class="main-indicators">
-                <div class="indicator wallet">
-                    <label>Кошелек:</label>
-                    <span class="amount" id="walletAmount">$520</span>
+            <div class="summary-bar">
+                <div class="summary-item">
+                    <span>Кошелек</span>
+                    <strong id="walletAmount">$0</strong>
                 </div>
-                <div class="indicator cash-flow">
-                    <label>Денежный поток:</label>
-                    <span class="amount" id="cashFlowAmount">$120</span>
+                <div class="summary-item">
+                    <span>Денежный поток</span>
+                    <strong id="cashFlowAmount">$0</strong>
                 </div>
-                <div class="indicator passive-income">
-                    <label>Пассивный доход:</label>
-                    <span class="amount" id="passiveIncomeAmount">$0</span>
+                <div class="summary-item">
+                    <span>Пассивный доход</span>
+                    <strong id="passiveIncomeAmount">$0</strong>
                 </div>
             </div>
 
-            <section class="income-section">
-                <h2><i class="fas fa-arrow-up"></i> Доходы</h2>
-                <div class="income-grid">
-                    <div class="fixed-income">
-                        <div class="income-item">
-                            <label>Заработная плата:</label>
-                            <span id="salaryAmount">$3000</span>
+            <div class="stage-forms">
+                <div class="stage-form active" id="stage1Form">
+                    <div class="stage-header">
+                        <div class="stage-objective">
+                            <h2>Цель этапа 1 — выйти из «Крысиный бег»</h2>
+                            <ol>
+                                <li>Увеличьте пассивный доход до уровня выше ваших расходов.</li>
+                                <li>Обеспечьте запас: пассивный доход должен покрывать расходы даже с учетом рождения ребенка.</li>
+                                <li>Управляйте активами и пассивами, чтобы повысить денежный поток.</li>
+                            </ol>
+                        </div>
+                        <div class="stage-personal">
+                            <div class="info-row">
+                                <span>Игрок:</span>
+                                <strong id="playerNicknameDisplay">Гость</strong>
+                            </div>
+                            <div class="info-row">
+                                <span>Профессия:</span>
+                                <strong id="stage1ProfessionName">—</strong>
+                            </div>
+                            <div class="info-row">
+                                <span>Аудитор:</span>
+                                <input type="text" id="auditorName" placeholder="Имя аудитора">
+                            </div>
+                            <div class="info-row">
+                                <span>Мечта:</span>
+                                <input type="text" id="playerDream" placeholder="Опишите свою мечту">
+                            </div>
                         </div>
                     </div>
-                    <div class="variable-income">
-                        <div class="income-item">
-                            <label>Капиталовложения:</label>
-                            <input type="number" id="investments" placeholder="0" onchange="updateTotalIncome()">
+
+                    <div class="financial-report">
+                        <div class="report-column">
+                            <h3><i class="fas fa-arrow-up"></i> Доходы</h3>
+                            <div class="income-section">
+                                <div class="income-row">
+                                    <span>Заработная плата</span>
+                                    <strong id="salaryAmount">$0</strong>
+                                </div>
+                                <div class="income-input">
+                                    <label>Капиталовложения</label>
+                                    <input type="number" id="investments" placeholder="0" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <label>Дивиденды</label>
+                                    <input type="number" id="dividends" placeholder="0" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <label>Недвижимость/Бизнес</label>
+                                    <input type="number" id="realEstateBusiness" placeholder="0" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <input type="text" placeholder="Дополнительный доход 1" class="income-name">
+                                    <input type="number" placeholder="0" class="additional-income" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <input type="text" placeholder="Дополнительный доход 2" class="income-name">
+                                    <input type="number" placeholder="0" class="additional-income" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <label>Участие в бизнесе 1</label>
+                                    <input type="number" id="businessIncome1" placeholder="0" onchange="updateTotalIncome()">
+                                </div>
+                                <div class="income-input">
+                                    <label>Участие в бизнесе 2</label>
+                                    <input type="number" id="businessIncome2" placeholder="0" onchange="updateTotalIncome()">
+                                </div>
+                            </div>
+                            <div class="total-line">Общий доход: $<span id="totalIncomeAmount">0</span></div>
                         </div>
-                        <div class="income-item">
-                            <label>Дивиденды:</label>
-                            <input type="number" id="dividends" placeholder="0" onchange="updateTotalIncome()">
-                        </div>
-                        <div class="income-item">
-                            <label>Недвижимость/Бизнес:</label>
-                            <input type="number" id="realEstateBusiness" placeholder="0" onchange="updateTotalIncome()">
-                        </div>
-                        <div class="income-item">
-                            <input type="text" placeholder="Дополнительный доход 1" class="income-name">
-                            <input type="number" placeholder="0" class="additional-income" onchange="updateTotalIncome()">
-                        </div>
-                        <div class="income-item">
-                            <input type="text" placeholder="Дополнительный доход 2" class="income-name">
-                            <input type="number" placeholder="0" class="additional-income" onchange="updateTotalIncome()">
+
+                        <div class="report-column">
+                            <h3><i class="fas fa-arrow-down"></i> Расходы</h3>
+                            <div class="expenses-list" id="fixedExpenses"></div>
+                            <div class="children-expenses">
+                                <label>Количество детей:</label>
+                                <input type="number" min="0" max="10" id="childrenCount" value="0" onchange="updateChildrenExpenses()">
+                                <span>Детские расходы: $<span id="childrenExpensesAmount">0</span></span>
+                            </div>
+                            <div class="total-line">Общие расходы: $<span id="totalExpensesAmount">0</span></div>
                         </div>
                     </div>
-                    <div class="business-participation">
-                        <h3>Участие в бизнесе</h3>
-                        <div class="income-item">
-                            <input type="number" id="businessIncome1" placeholder="Доход 1" onchange="updateTotalIncome()">
+
+                    <div class="balance-report">
+                        <div class="balance-column">
+                            <h3><i class="fas fa-chart-line"></i> Активы</h3>
+                            <div class="assets-section">
+                                <h4>Акции/Фонды/Депозиты</h4>
+                                <table class="assets-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Название</th>
+                                            <th>Количество</th>
+                                            <th>Цена/Сумма</th>
+                                            <th>Доход</th>
+                                            <th>Действие</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stocksTableBody">
+                                        <tr>
+                                            <td><input type="text" placeholder="Название актива"></td>
+                                            <td><input type="number" placeholder="Количество"></td>
+                                            <td><input type="number" placeholder="Цена"></td>
+                                            <td><input type="number" placeholder="Месячный доход"></td>
+                                            <td><button onclick="addStock(this)">Купить</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="assets-section">
+                                <h4>Недвижимость</h4>
+                                <table class="assets-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Название</th>
+                                            <th>Первоначальный взнос</th>
+                                            <th>Цена</th>
+                                            <th>Доход</th>
+                                            <th>Действие</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="realEstateTableBody">
+                                        <tr>
+                                            <td><input type="text" placeholder="Название недвижимости"></td>
+                                            <td><input type="number" placeholder="Первый взнос"></td>
+                                            <td><input type="number" placeholder="Полная цена"></td>
+                                            <td><input type="number" placeholder="Месячный доход"></td>
+                                            <td><button onclick="addRealEstate(this)">Купить</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="assets-section">
+                                <h4>Участие в бизнесе</h4>
+                                <table class="assets-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Название</th>
+                                            <th>Первоначальный взнос</th>
+                                            <th>Цена</th>
+                                            <th>Доход</th>
+                                            <th>Действие</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="businessTableBody">
+                                        <tr>
+                                            <td><input type="text" placeholder="Название бизнеса"></td>
+                                            <td><input type="number" placeholder="Первый взнос"></td>
+                                            <td><input type="number" placeholder="Полная цена"></td>
+                                            <td><input type="number" placeholder="Месячный доход"></td>
+                                            <td><button onclick="addBusiness(this)">Купить</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div class="income-item">
-                            <input type="number" id="businessIncome2" placeholder="Доход 2" onchange="updateTotalIncome()">
+                        <div class="balance-column">
+                            <h3><i class="fas fa-scale-balanced"></i> Пассивы</h3>
+                            <div class="liabilities-list" id="liabilitiesList"></div>
+
+                            <section class="actions-section">
+                                <div class="transaction-panel">
+                                    <h4>Операции</h4>
+                                    <div class="transaction-inputs">
+                                        <input type="number" id="transactionAmount" placeholder="Сумма">
+                                        <input type="text" id="transactionNote" placeholder="Примечание (необязательно)">
+                                        <button onclick="addIncome()" class="income-btn">+ Доход</button>
+                                        <button onclick="addExpense()" class="expense-btn">- Расход</button>
+                                    </div>
+                                </div>
+
+                                <div class="credit-panel">
+                                    <h4>Кредит</h4>
+                                    <p>Доступная сумма: $<span id="availableCredit">0</span></p>
+                                    <button onclick="takeCredit()" class="credit-btn">Взять кредит</button>
+                                </div>
+                            </section>
                         </div>
                     </div>
                 </div>
-                <div class="total-income">
-                    <strong>Общий доход: $<span id="totalIncomeAmount">3000</span></strong>
-                </div>
-            </section>
 
-            <section class="expenses-section">
-                <h2><i class="fas fa-arrow-down"></i> Расходы</h2>
-                <div class="fixed-expenses" id="fixedExpenses">
-                    <!-- Расходы будут добавлены через JavaScript -->
-                </div>
-                <div class="children-expenses">
-                    <label>Количество детей:</label>
-                    <input type="number" min="0" max="10" id="childrenCount" value="0" onchange="updateChildrenExpenses()">
-                    <span>Детские расходы: $<span id="childrenExpensesAmount">0</span></span>
-                </div>
-                <div class="total-expenses">
-                    <strong>Общие расходы: $<span id="totalExpensesAmount">1880</span></strong>
-                </div>
-            </section>
+                <div class="stage-form" id="stage2Form">
+                    <div class="fast-track-header">
+                        <div class="fast-track-message">
+                            <h2>Поздравляем! Вы выбрались из «Крысиный поток»!</h2>
+                            <p>Теперь начинается быстрый трек. Ваш пассивный доход масштабируется, а цели становятся смелее.</p>
+                            <ol>
+                                <li>Купите мечту, выбранную на первом этапе.</li>
+                                <li>Или приобретите бизнес и увеличьте пассивный доход минимум на $50 000.</li>
+                                <li>Используйте капитал, чтобы создавать новые источники дохода.</li>
+                            </ol>
+                        </div>
+                        <div class="fast-track-stats">
+                            <div class="stat-item">
+                                <span>Новый пассивный доход</span>
+                                <strong>$<span id="stage2PassiveIncome">0</span></strong>
+                                <small>100 × пассивного дохода этапа 1</small>
+                            </div>
+                            <div class="stat-item">
+                                <span>Стартовый пассивный доход этапа 1</span>
+                                <strong>$<span id="stage2BasePassive">0</span></strong>
+                            </div>
+                            <div class="stat-item">
+                                <span>Кошелек</span>
+                                <strong>$<span id="stage2WalletAmount">0</span></strong>
+                            </div>
+                        </div>
+                    </div>
 
-            <section class="assets-section">
-                <h2><i class="fas fa-chart-line"></i> Активы</h2>
-                
-                <div class="stocks-section">
-                    <h3>Акции/Фонды/Депозиты</h3>
-                    <table class="assets-table">
-                        <thead>
-                            <tr>
-                                <th>Название</th>
-                                <th>Количество</th>
-                                <th>Цена/Сумма</th>
-                                <th>Доход</th>
-                                <th>Действие</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stocksTableBody">
-                            <tr>
-                                <td><input type="text" placeholder="Название актива"></td>
-                                <td><input type="number" placeholder="Количество"></td>
-                                <td><input type="number" placeholder="Цена"></td>
-                                <td><input type="number" placeholder="Месячный доход"></td>
-                                <td><button onclick="addStock(this)">Купить</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="real-estate-section">
-                    <h3>Недвижимость</h3>
-                    <table class="assets-table">
-                        <thead>
-                            <tr>
-                                <th>Название</th>
-                                <th>Первоначальный взнос</th>
-                                <th>Цена</th>
-                                <th>Доход</th>
-                                <th>Действие</th>
-                            </tr>
-                        </thead>
-                        <tbody id="realEstateTableBody">
-                            <tr>
-                                <td><input type="text" placeholder="Название недвижимости"></td>
-                                <td><input type="number" placeholder="Первый взнос"></td>
-                                <td><input type="number" placeholder="Полная цена"></td>
-                                <td><input type="number" placeholder="Месячный доход"></td>
-                                <td><button onclick="addRealEstate(this)">Купить</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="business-section">
-                    <h3>Участие в бизнесе</h3>
-                    <table class="assets-table">
-                        <thead>
-                            <tr>
-                                <th>Название</th>
-                                <th>Первоначальный взнос</th>
-                                <th>Цена</th>
-                                <th>Доход</th>
-                                <th>Действие</th>
-                            </tr>
-                        </thead>
-                        <tbody id="businessTableBody">
-                            <tr>
-                                <td><input type="text" placeholder="Название бизнеса"></td>
-                                <td><input type="number" placeholder="Первый взнос"></td>
-                                <td><input type="number" placeholder="Полная цена"></td>
-                                <td><input type="number" placeholder="Месячный доход"></td>
-                                <td><button onclick="addBusiness(this)">Купить</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section class="actions-section">
-                <div class="transaction-panel">
-                    <h3>Операции</h3>
-                    <div class="transaction-inputs">
-                        <input type="number" id="transactionAmount" placeholder="Сумма">
-                        <input type="text" id="transactionNote" placeholder="Примечание (необязательно)">
-                        <button onclick="addIncome()" class="income-btn">+ Доход</button>
-                        <button onclick="addExpense()" class="expense-btn">- Расход</button>
+                    <div class="fast-track-body">
+                        <div class="fast-track-report">
+                            <h3>Пассивные доходы быстрого трека</h3>
+                            <ul id="stage2PassiveList"></ul>
+                            <div class="total-line">Итоговый пассивный доход: $<span id="stage2TotalPassive">0</span></div>
+                        </div>
+                        <div class="fast-track-goals">
+                            <h3>Цели этапа 2</h3>
+                            <p>Достигните мечты или доведите пассивный доход до целевых $<span id="stage2TargetIncome">50000</span>.</p>
+                            <div class="dream-display">Выбранная мечта: <span id="stage2DreamDisplay">—</span></div>
+                            <div class="goal-actions">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="dreamPurchased" onchange="toggleDreamPurchase()">
+                                    <span>Мечта куплена</span>
+                                </label>
+                                <div class="additional-passive">
+                                    <label>Добавить пассивный доход этапа 2</label>
+                                    <input type="number" id="stage2PassiveInput" placeholder="Сумма">
+                                    <button onclick="addStageTwoPassiveIncome()">Добавить</button>
+                                </div>
+                            </div>
+                            <div class="goal-status" id="stage2GoalStatus">Цель пока не достигнута.</div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="credit-panel">
-                    <h3>Кредит</h3>
-                    <p>Доступная сумма: $<span id="availableCredit">1200</span></p>
-                    <button onclick="takeCredit()" class="credit-btn">Взять кредит</button>
-                </div>
-            </section>
+            </div>
 
             <div class="second-round-notification" id="secondRoundNotification" style="display: none;">
                 <div class="notification-content">
-                    <h2>🎉 Поздравляем! Переход на второй круг!</h2>
-                    <p>Ваш пассивный доход превысил расходы!</p>
-                    <button onclick="goToSecondRound()" class="success-btn">Перейти на второй круг</button>
+                    <h2>🎉 Поздравляем! Условия быстрого трека выполнены!</h2>
+                    <p>Ваш пассивный доход покрывает все расходы даже с учетом рождения ребенка.</p>
+                    <button onclick="goToSecondRound()" class="success-btn">Перейти на второй этап</button>
                 </div>
             </div>
         </div>
