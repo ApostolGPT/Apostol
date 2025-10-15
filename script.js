@@ -325,6 +325,118 @@ let currentScreen = 1;
 let currentUser = null;
 let selectedProfession = null;
 let gameType = null; // 'cashflow' или 'secret'
+
+function createEmptyTurnStats() {
+  return {
+    turns: 0,
+    totalSpent: 0,
+    totalInvested: 0,
+    totalEarned: 0,
+    charityDonations: 0,
+    additionalExpenses: 0,
+    sharedDeals: 0,
+    skippedTurns: 0,
+    childrenBorn: 0,
+    logs: []
+  };
+}
+
+function formatCurrency(amount) {
+  const safeAmount = Number(amount) || 0;
+  return `$${safeAmount.toLocaleString()}`;
+}
+
+function formatMoneyDisplay(amount) {
+  const numeric = Number(amount) || 0;
+  return numeric === 0 ? '—' : `$${numeric.toLocaleString()}`;
+}
+
+function ensureTurnStats() {
+  if (!gameData.turnStats || !Array.isArray(gameData.turnStats.logs)) {
+    gameData.turnStats = createEmptyTurnStats();
+  }
+  return gameData.turnStats;
+}
+
+function registerTurn(actionType, label, details = {}) {
+  const stats = ensureTurnStats();
+  stats.turns += 1;
+  const turnNumber = stats.turns;
+
+  const participants = Math.max(1, parseInt(details.participants, 10) || 1);
+  const invested = Number(details.invested) || 0;
+  const spent = Number(details.spent) || 0;
+  const earned = Number(details.earned) || 0;
+  const charity = Number(details.charity) || 0;
+  const skipped = Number(details.skipped) || 0;
+  const childrenAdded = Number(details.childrenAdded) || 0;
+
+  const entry = {
+    turn: turnNumber,
+    type: actionType,
+    label,
+    participants,
+    invested,
+    spent,
+    earned,
+    note: details.note || ''
+  };
+
+  if (details.result) {
+    entry.result = details.result;
+  }
+
+  if (participants > 1) {
+    entry.shared = true;
+    stats.sharedDeals += 1;
+  }
+
+  if (skipped > 0) {
+    entry.skipped = skipped;
+    stats.skippedTurns += skipped;
+  }
+
+  if (childrenAdded > 0) {
+    entry.childrenAdded = childrenAdded;
+    stats.childrenBorn += childrenAdded;
+  }
+
+  stats.totalInvested += invested;
+  stats.totalSpent += spent;
+  stats.totalEarned += earned;
+
+  if (charity > 0) {
+    stats.charityDonations += charity;
+  }
+
+  stats.logs.push(entry);
+  return entry;
+}
+
+function ensureStageTwoState() {
+  if (!gameData.stageTwoState) {
+    gameData.stageTwoState = {
+      manualPassive: 0,
+      businesses: [],
+      passiveGoalClaimed: false,
+      dreamGoalClaimed: false,
+      reportUnlocked: false,
+      victoryCelebrated: false
+    };
+  } else {
+    gameData.stageTwoState.manualPassive = Number(gameData.stageTwoState.manualPassive) || 0;
+    gameData.stageTwoState.businesses = Array.isArray(gameData.stageTwoState.businesses)
+      ? gameData.stageTwoState.businesses
+      : [];
+    gameData.stageTwoState.passiveGoalClaimed = !!gameData.stageTwoState.passiveGoalClaimed;
+    gameData.stageTwoState.dreamGoalClaimed = !!gameData.stageTwoState.dreamGoalClaimed;
+    gameData.stageTwoState.reportUnlocked = !!gameData.stageTwoState.reportUnlocked;
+    gameData.stageTwoState.victoryCelebrated = !!gameData.stageTwoState.victoryCelebrated;
+  }
+
+  return gameData.stageTwoState;
+}
+
 let gameData = {
   wallet: 0,
   passiveIncome: 0,
@@ -335,8 +447,10 @@ let gameData = {
   stocks: [],
   realEstate: [],
   businesses: [],
+  additionalExpenses: [],
   children: 0,
   round: 1,
+  turnStats: createEmptyTurnStats(),
   secretData: {
     inventory: 100,
     passiveIncome: 0,
@@ -346,7 +460,9 @@ let gameData = {
     manualPassive: 0,
     businesses: [],
     passiveGoalClaimed: false,
-    dreamGoalClaimed: false
+    dreamGoalClaimed: false,
+    reportUnlocked: false,
+    victoryCelebrated: false
   }
 };
 
@@ -363,6 +479,9 @@ let stageTwoManualPassive = 0;
 let stageTwoBusinesses = [];
 let stageTwoPassiveGoalClaimed = false;
 let stageTwoDreamGoalClaimed = false;
+let stageTwoReportUnlocked = false;
+let stageTwoVictoryCelebrated = false;
+let stageTwoReportTimer = null;
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
@@ -590,6 +709,10 @@ function initializeCashFlowGame() {
   gameData.stocks = [];
   gameData.realEstate = [];
   gameData.businesses = [];
+  gameData.additionalExpenses = [];
+  gameData.turnStats = createEmptyTurnStats();
+  ensureTurnStats();
+  ensureStageTwoState();
 
   // Настройки этапов
   cashFlowStage = 1;
@@ -602,6 +725,20 @@ function initializeCashFlowGame() {
   stageTwoBusinesses = [];
   stageTwoPassiveGoalClaimed = false;
   stageTwoDreamGoalClaimed = false;
+  stageTwoReportUnlocked = false;
+  stageTwoVictoryCelebrated = false;
+  if (stageTwoReportTimer) {
+    clearTimeout(stageTwoReportTimer);
+    stageTwoReportTimer = null;
+  }
+
+  const stageState = ensureStageTwoState();
+  stageState.manualPassive = 0;
+  stageState.businesses = [];
+  stageState.passiveGoalClaimed = false;
+  stageState.dreamGoalClaimed = false;
+  stageState.reportUnlocked = false;
+  stageState.victoryCelebrated = false;
 
   const stage2Button = document.getElementById('stage2Button');
   if (stage2Button) {
@@ -680,38 +817,51 @@ function buildProfessionLiabilities() {
   });
 }
 
-function adjustLiabilityPayment(index, newPayment) {
+function promptPartialLiability(index) {
   const liability = gameData.liabilities[index];
   if (!liability || liability.closed) {
     return;
   }
 
-  if (isNaN(newPayment) || newPayment < 0) {
-    showModal('Ошибка', 'Введите корректный размер платежа.');
+  if (gameData.wallet <= 0) {
+    showModal('Недостаточно средств', 'В кошельке нет средств для частичного погашения.');
     return;
   }
 
-  if (newPayment > liability.originalPayment) {
-    showModal('Ошибка', 'Платеж не может превышать исходный размер.');
+  const maxAmount = Math.min(liability.balance, gameData.wallet);
+  if (maxAmount <= 0) {
+    showModal('Ошибка', 'Этот пассив уже погашен.');
     return;
   }
 
-  if (newPayment === 0 && liability.balance > 0) {
-    showModal('Ошибка', 'Погасите пассив полностью, чтобы обнулить платеж.');
+  const promptMessage = `Введите сумму, которую готовы заплатить сейчас.\nДоступно в кошельке: ${formatCurrency(gameData.wallet)}\nОстаток долга: ${formatCurrency(liability.balance)}`;
+  const input = prompt(promptMessage, Math.min(1000, maxAmount));
+  if (input === null) {
     return;
   }
 
-  liability.currentPayment = newPayment;
-  if (liability.expenseKey) {
-    gameData.expenses[liability.expenseKey] = newPayment;
+  const amount = parseFloat(input);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму.');
+    return;
   }
 
-  if (newPayment === 0) {
-    liability.closed = true;
+  const forceClose = amount >= liability.balance;
+  payLiabilityAmount(index, amount, forceClose);
+}
+
+function closeLiabilityCompletely(index) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
   }
 
-  updateCashFlowDisplay();
-  showModal('Платеж обновлен', `${liability.label}: $${newPayment.toLocaleString()} в месяц.`);
+  if (gameData.wallet < liability.balance) {
+    showModal('Недостаточно средств', 'У вас недостаточно денег в кошельке, чтобы закрыть пассив полностью.');
+    return;
+  }
+
+  payLiabilityAmount(index, liability.balance, true);
 }
 
 function payLiabilityAmount(index, amount, forceClose = false) {
@@ -730,27 +880,51 @@ function payLiabilityAmount(index, amount, forceClose = false) {
     return;
   }
 
+  const previousBalance = liability.balance;
+  const previousPayment = liability.currentPayment || 0;
   const payment = Math.min(amount, liability.balance);
   gameData.wallet -= payment;
   liability.balance = Math.max(0, liability.balance - payment);
   liability.paid += payment;
 
+  let newPayment = previousPayment;
+  if (liability.originalBalance > 0 && liability.balance > 0) {
+    const ratio = liability.balance / liability.originalBalance;
+    newPayment = liability.originalPayment * ratio;
+    newPayment = Number(newPayment.toFixed(2));
+    if (newPayment < 0.01) {
+      newPayment = 0;
+    }
+  } else {
+    newPayment = 0;
+  }
+
   if (liability.balance <= 0.01 || forceClose) {
     liability.balance = 0;
     liability.closed = true;
-    if (liability.expenseKey) {
-      liability.currentPayment = 0;
-      gameData.expenses[liability.expenseKey] = 0;
-    }
+    newPayment = 0;
+  }
+
+  liability.currentPayment = newPayment;
+
+  if (liability.expenseKey) {
+    gameData.expenses[liability.expenseKey] = newPayment;
   }
 
   updateCashFlowDisplay();
 
   const formatted = payment.toLocaleString();
+  const freedDelta = Math.max(0, previousPayment - newPayment);
   if (liability.closed) {
-    showModal('Пассив погашен', `${liability.label}: -$${formatted}. Платеж переходит в ваш денежный поток.`);
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Пассив погашен', `${liability.label}: -$${formatted}. Платеж переходит в ваш денежный поток.${freedMessage}`);
   } else {
-    showModal('Платеж учтен', `${liability.label}: -$${formatted}.`);
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Платеж учтен', `${liability.label}: -$${formatted}.${freedMessage}`);
   }
 }
 
@@ -965,6 +1139,99 @@ function updateExpensesDisplay() {
       fixedExpensesContainer.appendChild(expenseItem);
     });
   }
+
+  renderCustomExpenses();
+}
+
+function renderCustomExpenses() {
+  const list = document.getElementById('customExpensesList');
+  if (!list) return;
+
+  list.innerHTML = '';
+  const extras = Array.isArray(gameData.additionalExpenses) ? gameData.additionalExpenses : [];
+
+  if (!extras.length) {
+    const empty = document.createElement('div');
+    empty.className = 'custom-expense-empty';
+    empty.textContent = 'Дополнительные расходы пока не добавлены.';
+    list.appendChild(empty);
+    return;
+  }
+
+  extras.forEach(expense => {
+    const item = document.createElement('div');
+    item.className = 'custom-expense-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = expense.name;
+    const amountSpan = document.createElement('span');
+    amountSpan.textContent = formatCurrency(expense.amount);
+
+    const removeButton = document.createElement('button');
+    removeButton.textContent = 'Удалить';
+    removeButton.onclick = () => removeCustomExpense(expense.id);
+
+    item.appendChild(nameSpan);
+    item.appendChild(amountSpan);
+    item.appendChild(removeButton);
+    list.appendChild(item);
+  });
+}
+
+function addCustomExpense() {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    gameData.additionalExpenses = [];
+  }
+
+  const nameInput = prompt('Опишите новый расход (например, «Автомобиль»).');
+  if (nameInput === null) {
+    return;
+  }
+
+  const name = nameInput.trim();
+  if (!name) {
+    showModal('Ошибка', 'Введите название расхода.');
+    return;
+  }
+
+  const amountInput = prompt('Укажите сумму ежемесячного расхода в долларах.');
+  if (amountInput === null) {
+    return;
+  }
+
+  const amount = parseFloat(amountInput);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму расхода.');
+    return;
+  }
+
+  const expense = {
+    id: Date.now(),
+    name,
+    amount: Number(amount.toFixed(2))
+  };
+
+  gameData.additionalExpenses.push(expense);
+  const stats = ensureTurnStats();
+  stats.additionalExpenses += expense.amount;
+
+  updateCashFlowDisplay();
+  showModal('Дополнительный расход добавлен', `${expense.name}: ${formatCurrency(expense.amount)} будет учитываться в расходах.`);
+}
+
+function removeCustomExpense(id) {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    return;
+  }
+
+  const index = gameData.additionalExpenses.findIndex(expense => expense.id === id);
+  if (index === -1) {
+    return;
+  }
+
+  const [removed] = gameData.additionalExpenses.splice(index, 1);
+  updateCashFlowDisplay();
+  showModal('Расход удален', `${removed.name} больше не учитывается в расходах.`);
 }
 
 function renderLiabilities() {
@@ -1002,90 +1269,38 @@ function renderLiabilities() {
     `;
 
     if (liability.expenseKey && liability.originalPayment > 0) {
-      const controls = document.createElement('div');
-      controls.className = 'liability-controls';
-
-      const paymentGroup = document.createElement('div');
-      paymentGroup.className = 'liability-group';
-      paymentGroup.innerHTML = `
-        <label>Изменить платеж</label>
+      const summary = document.createElement('div');
+      summary.className = 'liability-extra';
+      summary.innerHTML = `
+        <span>Освобождено ежемесячно</span>
+        <span class="liability-freed">$${freed.toLocaleString()}</span>
       `;
-      const paymentInput = document.createElement('input');
-      paymentInput.type = 'number';
-      paymentInput.min = '0';
-      paymentInput.step = '1';
-      paymentInput.value = liability.currentPayment;
-      paymentInput.disabled = liability.closed;
-      const paymentButton = document.createElement('button');
-      paymentButton.textContent = 'Сохранить';
-      paymentButton.disabled = liability.closed;
-      paymentButton.onclick = () => {
-        adjustLiabilityPayment(index, parseFloat(paymentInput.value));
-      };
-      paymentGroup.appendChild(paymentInput);
-      paymentGroup.appendChild(paymentButton);
+      item.appendChild(summary);
 
-      const freedTag = document.createElement('div');
-      freedTag.className = 'liability-freed';
-      freedTag.textContent = `Освобождено: $${freed.toLocaleString()}`;
+      const actions = document.createElement('div');
+      actions.className = 'liability-actions';
 
-      const payoffGroup = document.createElement('div');
-      payoffGroup.className = 'liability-group';
-      payoffGroup.innerHTML = '<label>Погасить долг</label>';
-      const payInput = document.createElement('input');
-      payInput.type = 'number';
-      payInput.min = '0';
-      payInput.step = '1';
-      payInput.placeholder = 'Сумма';
-      payInput.disabled = liability.closed;
-      const payButton = document.createElement('button');
-      payButton.textContent = 'Оплатить';
-      payButton.disabled = liability.closed;
-      payButton.onclick = () => {
-        payLiabilityAmount(index, parseFloat(payInput.value));
+      const partialButton = document.createElement('button');
+      partialButton.className = 'liability-action partial';
+      partialButton.textContent = 'Закрыть часть';
+      partialButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet <= 0;
+      partialButton.onclick = () => {
+        promptPartialLiability(index);
       };
-      const closeButton = document.createElement('button');
-      closeButton.textContent = 'Закрыть пассив';
-      closeButton.classList.add('outline');
-      closeButton.disabled = liability.closed || liability.balance <= 0;
-      closeButton.onclick = () => {
-        payLiabilityAmount(index, liability.balance, true);
-      };
-      payoffGroup.appendChild(payInput);
-      payoffGroup.appendChild(payButton);
-      payoffGroup.appendChild(closeButton);
 
-      controls.appendChild(paymentGroup);
-      controls.appendChild(payoffGroup);
-      controls.appendChild(freedTag);
-      item.appendChild(controls);
+      const fullButton = document.createElement('button');
+      fullButton.className = 'liability-action full';
+      fullButton.textContent = 'Закрыть полностью';
+      fullButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet < liability.balance;
+      fullButton.onclick = () => {
+        closeLiabilityCompletely(index);
+      };
+
+      actions.appendChild(partialButton);
+      actions.appendChild(fullButton);
+      item.appendChild(actions);
     }
 
-    liabilitiesContainer.appendChild(item);
-  });
-}
-
-function renderLiabilities() {
-  const liabilitiesContainer = document.getElementById('liabilitiesList');
-  if (!liabilitiesContainer || !selectedProfession) return;
-
-  const liabilityLabels = {
-    homeMortgage: 'Ипотека на дом',
-    schoolLoan: 'Кредит на обучение',
-    carLoan: 'Кредит на автомобиль',
-    creditCards: 'Кредитные карты',
-    retailDebt: 'Розничные долги'
-  };
-
-  liabilitiesContainer.innerHTML = '';
-
-  Object.entries(selectedProfession.liabilities || {}).forEach(([key, value]) => {
-    const item = document.createElement('div');
-    item.className = 'liability-item';
-    item.innerHTML = `
-      <span>${liabilityLabels[key] || key}</span>
-      <span>$${value}</span>
-    `;
     liabilitiesContainer.appendChild(item);
   });
 }
@@ -1151,6 +1366,9 @@ function updateTotalExpenses() {
   // Платежи по кредитам
   const loansTotal = gameData.loans.reduce((sum, loan) => sum + loan.payment, 0);
   totalExpenses += loansTotal;
+
+  const additionalExpensesTotal = (gameData.additionalExpenses || []).reduce((sum, expense) => sum + expense.amount, 0);
+  totalExpenses += additionalExpensesTotal;
 
   document.getElementById('totalExpensesAmount').textContent = totalExpenses.toLocaleString();
 
@@ -1228,6 +1446,10 @@ function updateStageButtons() {
 }
 
 function updateStage2Display() {
+  const stageState = ensureStageTwoState();
+  stageTwoReportUnlocked = !!stageState.reportUnlocked;
+  stageTwoVictoryCelebrated = !!stageState.victoryCelebrated;
+
   const baseElement = document.getElementById('stage2BasePassive');
   if (baseElement) {
     baseElement.textContent = stageTwoBasePassive.toLocaleString();
@@ -1360,6 +1582,89 @@ function updateStageGoalStatus() {
     dreamCard.classList.toggle('ready', dreamReady);
     dreamCard.classList.toggle('completed', stageTwoDreamGoalClaimed);
   }
+
+  handleGoalMilestones();
+}
+
+function handleGoalMilestones() {
+  const notice = document.getElementById('stage2GoalNotice');
+  const noticeMessage = document.getElementById('stage2GoalNoticeMessage');
+  const victory = document.getElementById('stage2VictoryBanner');
+  const reportButton = document.getElementById('stage2ReportButton');
+
+  if (!notice || !victory || !reportButton) {
+    return;
+  }
+
+  if (!stageTwoUnlocked) {
+    notice.classList.remove('active');
+    victory.classList.remove('active');
+    reportButton.classList.remove('visible');
+    reportButton.disabled = true;
+    stageTwoReportUnlocked = false;
+    stageTwoVictoryCelebrated = false;
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+    persistStageTwoState();
+    return;
+  }
+
+  const completedPassive = stageTwoPassiveGoalClaimed;
+  const completedDream = stageTwoDreamGoalClaimed;
+  const completedCount = (completedPassive ? 1 : 0) + (completedDream ? 1 : 0);
+
+  if (completedCount === 1) {
+    notice.classList.add('active');
+    if (noticeMessage) {
+      noticeMessage.textContent = completedPassive
+        ? 'Осталось подтвердить мечту, чтобы завершить игру.'
+        : 'Увеличьте пассивный доход минимум на $50 000, чтобы завершить игру.';
+    }
+  } else {
+    notice.classList.remove('active');
+  }
+
+  if (completedCount === 2) {
+    victory.classList.add('active');
+    if (!stageTwoVictoryCelebrated) {
+      stageTwoVictoryCelebrated = true;
+      victory.classList.add('celebrate');
+      setTimeout(() => victory.classList.remove('celebrate'), 2500);
+    }
+
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+
+    if (!stageTwoReportUnlocked) {
+      reportButton.classList.remove('visible');
+      reportButton.disabled = true;
+      stageTwoReportTimer = setTimeout(() => {
+        stageTwoReportUnlocked = true;
+        reportButton.classList.add('visible');
+        reportButton.disabled = false;
+        persistStageTwoState();
+      }, 5000);
+    } else {
+      reportButton.classList.add('visible');
+      reportButton.disabled = false;
+    }
+  } else {
+    victory.classList.remove('active');
+    reportButton.classList.remove('visible');
+    reportButton.disabled = true;
+    stageTwoReportUnlocked = false;
+    stageTwoVictoryCelebrated = false;
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+  }
+
+  persistStageTwoState();
 }
 
 function recalculateStageTwoAdditionalPassive() {
@@ -1368,19 +1673,13 @@ function recalculateStageTwoAdditionalPassive() {
 }
 
 function persistStageTwoState() {
-  if (!gameData.stageTwoState) {
-    gameData.stageTwoState = {
-      manualPassive: 0,
-      businesses: [],
-      passiveGoalClaimed: false,
-      dreamGoalClaimed: false
-    };
-  }
-
-  gameData.stageTwoState.manualPassive = stageTwoManualPassive;
-  gameData.stageTwoState.businesses = stageTwoBusinesses.map(business => ({ ...business }));
-  gameData.stageTwoState.passiveGoalClaimed = stageTwoPassiveGoalClaimed;
-  gameData.stageTwoState.dreamGoalClaimed = stageTwoDreamGoalClaimed;
+  const state = ensureStageTwoState();
+  state.manualPassive = stageTwoManualPassive;
+  state.businesses = stageTwoBusinesses.map(business => ({ ...business }));
+  state.passiveGoalClaimed = stageTwoPassiveGoalClaimed;
+  state.dreamGoalClaimed = stageTwoDreamGoalClaimed;
+  state.reportUnlocked = stageTwoReportUnlocked;
+  state.victoryCelebrated = stageTwoVictoryCelebrated;
 }
 
 function renderStageTwoReport() {
@@ -1914,6 +2213,266 @@ function sellBusiness(index) {
   showModal('Бизнес продан', `${business.name}: +$${salePrice.toLocaleString()}`);
 }
 
+function handleTurnAction(actionType) {
+  switch (actionType) {
+    case 'bigDeal':
+      handleDealAction('big');
+      break;
+    case 'smallDeal':
+      handleDealAction('small');
+      break;
+    case 'expenseEvent':
+      handleExpenseEvent();
+      break;
+    case 'market':
+      handleMarketAction();
+      break;
+    case 'charity':
+      handleCharityAction();
+      break;
+    case 'lifeEvent':
+      handleLifeEvent();
+      break;
+    default:
+      break;
+  }
+}
+
+function handleDealAction(size) {
+  const dealLabel = size === 'big' ? 'Большая сделка' : 'Малая сделка';
+  const solo = confirm('Вы участвуете в сделке один? Нажмите «ОК», если да.');
+  let participants = 1;
+
+  if (!solo) {
+    const participantsInput = prompt('Сколько человек участвуют вместе с вами?');
+    if (participantsInput === null) {
+      return;
+    }
+
+    participants = parseInt(participantsInput, 10);
+    if (isNaN(participants) || participants < 2) {
+      showModal('Ошибка', 'Введите количество участников (минимум 2).');
+      return;
+    }
+  }
+
+  const investmentInput = prompt('Сколько средств вы вкладываете в эту сделку? (можно 0)');
+  if (investmentInput === null) {
+    return;
+  }
+  const invested = parseFloat(investmentInput) || 0;
+  if (invested < 0) {
+    showModal('Ошибка', 'Сумма не может быть отрицательной.');
+    return;
+  }
+
+  const incomeInput = prompt('Сколько вы заработали прямо сейчас на этой сделке? (можно 0)');
+  if (incomeInput === null) {
+    return;
+  }
+  const earned = parseFloat(incomeInput) || 0;
+  if (earned < 0) {
+    showModal('Ошибка', 'Сумма не может быть отрицательной.');
+    return;
+  }
+
+  const note = prompt('Кратко опишите сделку (необязательно)') || '';
+
+  registerTurn(size === 'big' ? 'bigDeal' : 'smallDeal', dealLabel, {
+    participants,
+    invested,
+    earned,
+    note: note.trim()
+  });
+
+  const sharedMessage = participants > 1 ? ' Сделка проведена в складчину.' : '';
+  showModal('Сделка записана', `${dealLabel} сохранена.${sharedMessage}`);
+}
+
+function handleExpenseEvent() {
+  const descriptionInput = prompt('Какие расходы вы оплачиваете?');
+  if (descriptionInput === null) {
+    return;
+  }
+
+  const description = descriptionInput.trim();
+  if (!description) {
+    showModal('Ошибка', 'Опишите расход.');
+    return;
+  }
+
+  const amountInput = prompt('Сколько вы потратили из кошелька?');
+  if (amountInput === null) {
+    return;
+  }
+
+  const amount = parseFloat(amountInput);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств в кошельке.');
+    return;
+  }
+
+  gameData.wallet -= amount;
+  registerTurn('expense', 'Неожиданный расход', {
+    spent: amount,
+    note: description
+  });
+
+  updateCashFlowDisplay();
+  showModal('Расход учтен', `${description}: -${formatCurrency(amount)}`);
+}
+
+function handleMarketAction() {
+  const success = confirm('Удалось реализовать сделку на рынке? Нажмите «ОК», если да.');
+
+  if (success) {
+    const revenueInput = prompt('Сколько вы получили от сделки? (можно 0)');
+    if (revenueInput === null) {
+      return;
+    }
+    const revenue = parseFloat(revenueInput) || 0;
+    if (revenue < 0) {
+      showModal('Ошибка', 'Сумма не может быть отрицательной.');
+      return;
+    }
+
+    const note = prompt('Что вы продали? (необязательно)') || '';
+    registerTurn('market', 'Рынок', {
+      earned: revenue,
+      note: (`Сделка завершена. ${note}`).trim(),
+      result: 'success'
+    });
+    showModal('Карточка рынка', 'Сделка отмечена как успешная.');
+  } else {
+    const note = prompt('Что произошло на рынке? (необязательно)') || '';
+    registerTurn('market', 'Рынок', {
+      note: (`Сделка не состоялась. ${note}`).trim(),
+      result: 'fail'
+    });
+    showModal('Карточка рынка', 'Сделка отмечена как несостоявшаяся.');
+  }
+}
+
+function handleCharityAction() {
+  const ready = confirm('Готовы пожертвовать деньги? Нажмите «ОК», если да.');
+
+  if (ready) {
+    const amountInput = prompt('Какую сумму вы жертвуете?');
+    if (amountInput === null) {
+      return;
+    }
+
+    const amount = parseFloat(amountInput);
+    if (!amount || amount <= 0) {
+      showModal('Ошибка', 'Введите корректную сумму пожертвования.');
+      return;
+    }
+
+    if (amount > gameData.wallet) {
+      showModal('Ошибка', 'Недостаточно средств в кошельке.');
+      return;
+    }
+
+    const note = prompt('Кому вы помогаете? (необязательно)') || '';
+    gameData.wallet -= amount;
+    registerTurn('charity', 'Благотворительность', {
+      spent: amount,
+      charity: amount,
+      note: note.trim()
+    });
+    updateCashFlowDisplay();
+    showModal('Пожертвование учтено', `-${formatCurrency(amount)}`);
+  } else {
+    registerTurn('charity', 'Благотворительность', {
+      note: 'Пожертвование отложено.'
+    });
+    showModal('Ход завершен', 'Вы решили отложить благотворительность.');
+  }
+}
+
+function handleLifeEvent() {
+  openChoiceOverlay('Что произошло?', [
+    {
+      label: 'Вас уволили',
+      description: 'Пропустите два хода и восстановите план.',
+      onSelect: () => {
+        registerTurn('layoff', 'Увольнение', {
+          note: 'Пропустить 2 хода',
+          skipped: 2
+        });
+        showModal('Увольнение', 'Вы пропускаете два хода. Запишите это в журнал.');
+      }
+    },
+    {
+      label: 'Поздравляем! У вас родился ребенок',
+      description: 'Добавьте нового ребенка и учтите расходы.',
+      onSelect: () => {
+        const currentChildren = Number(gameData.children) || 0;
+        gameData.children = currentChildren + 1;
+        const childrenInput = document.getElementById('childrenCount');
+        if (childrenInput) {
+          childrenInput.value = gameData.children;
+        }
+        updateChildrenExpenses();
+        registerTurn('family', 'Рождение ребенка', {
+          note: 'Расходы на детей увеличены',
+          childrenAdded: 1
+        });
+        showModal('Пополнение в семье', 'Количество детей увеличено, расходы обновлены.');
+      }
+    }
+  ]);
+}
+
+function openChoiceOverlay(title, options) {
+  const overlay = document.getElementById('choiceOverlay');
+  const titleElement = document.getElementById('choiceTitle');
+  const optionsContainer = document.getElementById('choiceOptions');
+  if (!overlay || !titleElement || !optionsContainer) {
+    return;
+  }
+
+  titleElement.textContent = title;
+  optionsContainer.innerHTML = '';
+
+  options.forEach(option => {
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'choice-option';
+
+    const heading = document.createElement('h4');
+    heading.textContent = option.label;
+    const description = document.createElement('p');
+    description.textContent = option.description || '';
+
+    optionDiv.appendChild(heading);
+    optionDiv.appendChild(description);
+    optionDiv.onclick = () => {
+      closeChoiceOverlay();
+      option.onSelect();
+    };
+
+    optionsContainer.appendChild(optionDiv);
+  });
+
+  overlay.classList.add('active');
+}
+
+function closeChoiceOverlay() {
+  const overlay = document.getElementById('choiceOverlay');
+  if (!overlay) return;
+
+  overlay.classList.remove('active');
+  const optionsContainer = document.getElementById('choiceOptions');
+  if (optionsContainer) {
+    optionsContainer.innerHTML = '';
+  }
+}
+
 function checkSecondRound() {
   if (stageTwoUnlocked || !selectedProfession) return;
 
@@ -1944,6 +2503,20 @@ function goToSecondRound() {
   stageTwoPassiveGoalClaimed = false;
   stageTwoDreamGoalClaimed = false;
   dreamPurchased = false;
+  stageTwoReportUnlocked = false;
+  stageTwoVictoryCelebrated = false;
+  if (stageTwoReportTimer) {
+    clearTimeout(stageTwoReportTimer);
+    stageTwoReportTimer = null;
+  }
+
+  const stageState = ensureStageTwoState();
+  stageState.manualPassive = 0;
+  stageState.businesses = [];
+  stageState.passiveGoalClaimed = false;
+  stageState.dreamGoalClaimed = false;
+  stageState.reportUnlocked = false;
+  stageState.victoryCelebrated = false;
   persistStageTwoState();
 
   const stage2Button = document.getElementById('stage2Button');
@@ -1956,6 +2529,78 @@ function goToSecondRound() {
   showCashflowStage(2);
   updateStage2Display();
   updateStageButtons();
+}
+
+function showFinalReport() {
+  const overlay = document.getElementById('finalReportOverlay');
+  if (!overlay) return;
+
+  const stats = ensureTurnStats();
+  const turnField = document.getElementById('reportTotalTurns');
+  if (turnField) turnField.textContent = stats.turns.toString();
+
+  const spentField = document.getElementById('reportTotalSpent');
+  if (spentField) spentField.textContent = formatCurrency(stats.totalSpent);
+
+  const investedField = document.getElementById('reportTotalInvested');
+  if (investedField) investedField.textContent = formatCurrency(stats.totalInvested);
+
+  const earnedField = document.getElementById('reportTotalEarned');
+  if (earnedField) earnedField.textContent = formatCurrency(stats.totalEarned);
+
+  const charityField = document.getElementById('reportCharity');
+  if (charityField) charityField.textContent = formatCurrency(stats.charityDonations);
+
+  const additionalField = document.getElementById('reportAdditionalExpenses');
+  if (additionalField) additionalField.textContent = formatCurrency(stats.additionalExpenses);
+
+  const sharedField = document.getElementById('reportSharedDeals');
+  if (sharedField) sharedField.textContent = stats.sharedDeals.toString();
+
+  const skippedField = document.getElementById('reportSkippedTurns');
+  if (skippedField) skippedField.textContent = stats.skippedTurns.toString();
+
+  const tableBody = document.getElementById('finalReportTableBody');
+  if (tableBody) {
+    tableBody.innerHTML = '';
+    if (!stats.logs.length) {
+      const emptyRow = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 7;
+      cell.textContent = 'Журнал пока пуст. Совершите несколько ходов в игре.';
+      emptyRow.appendChild(cell);
+      tableBody.appendChild(emptyRow);
+    } else {
+      stats.logs.forEach(log => {
+        const row = document.createElement('tr');
+        const cells = [
+          log.turn,
+          log.label,
+          log.participants,
+          formatMoneyDisplay(log.spent),
+          formatMoneyDisplay(log.invested),
+          formatMoneyDisplay(log.earned),
+          log.note || '—'
+        ];
+
+        cells.forEach(value => {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+
+        tableBody.appendChild(row);
+      });
+    }
+  }
+
+  overlay.classList.add('active');
+}
+
+function closeFinalReport() {
+  const overlay = document.getElementById('finalReportOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('active');
 }
 
 // === СЕКРЕТ ДЕНЕГ ИГРА ===
@@ -2276,6 +2921,13 @@ function loadGameData() {
 
     if (data.gameData) {
       gameData = { ...gameData, ...data.gameData };
+      if (!Array.isArray(gameData.additionalExpenses)) {
+        gameData.additionalExpenses = [];
+      }
+      ensureTurnStats();
+      const stageState = ensureStageTwoState();
+      stageTwoReportUnlocked = !!stageState.reportUnlocked;
+      stageTwoVictoryCelebrated = !!stageState.victoryCelebrated;
     }
 
     // Не восстанавливаем currentScreen, чтобы всегда начинать с приветствия
