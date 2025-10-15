@@ -1065,6 +1065,31 @@ function renderLiabilities() {
   });
 }
 
+function renderLiabilities() {
+  const liabilitiesContainer = document.getElementById('liabilitiesList');
+  if (!liabilitiesContainer || !selectedProfession) return;
+
+  const liabilityLabels = {
+    homeMortgage: 'Ипотека на дом',
+    schoolLoan: 'Кредит на обучение',
+    carLoan: 'Кредит на автомобиль',
+    creditCards: 'Кредитные карты',
+    retailDebt: 'Розничные долги'
+  };
+
+  liabilitiesContainer.innerHTML = '';
+
+  Object.entries(selectedProfession.liabilities || {}).forEach(([key, value]) => {
+    const item = document.createElement('div');
+    item.className = 'liability-item';
+    item.innerHTML = `
+      <span>${liabilityLabels[key] || key}</span>
+      <span>$${value}</span>
+    `;
+    liabilitiesContainer.appendChild(item);
+  });
+}
+
 function updateTotalIncome() {
   let totalIncome = selectedProfession.salary;
   
