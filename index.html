@@ -519,140 +519,439 @@
         </div>
     </div>
 
+    <div id="choiceOverlay" class="choice-overlay">
+        <div class="choice-dialog">
+            <h3 id="choiceTitle">Выберите событие</h3>
+            <div class="choice-options" id="choiceOptions"></div>
+            <button class="close-choice" onclick="closeChoiceOverlay()">Отмена</button>
+        </div>
+    </div>
+
+    <div id="finalReportOverlay" class="report-overlay">
+        <div class="report-dialog">
+            <div class="report-header">
+                <div>
+                    <h2>Финальный отчет</h2>
+                    <p class="report-subtitle">Подробное резюме вашего пути к финансовой свободе</p>
+                </div>
+                <button class="close-report" onclick="closeFinalReport()">×</button>
+            </div>
+            <div class="report-body">
+                <section class="report-summary">
+                    <h3 class="report-section-title">Ключевые метрики</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>Сделано ходов</span>
+                            <strong id="reportTotalTurns">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Потрачено</span>
+                            <strong id="reportTotalSpent">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Вложено в сделки</span>
+                            <strong id="reportTotalInvested">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Заработано</span>
+                            <strong id="reportTotalEarned">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Благотворительность</span>
+                            <strong id="reportCharity">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Доп. расходы</span>
+                            <strong id="reportAdditionalExpenses">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Совместных сделок</span>
+                            <strong id="reportSharedDeals">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Пропущено ходов</span>
+                            <strong id="reportSkippedTurns">0</strong>
+                        </div>
+                    </div>
+                </section>
+                <section class="report-log">
+                    <div class="report-log-header">
+                        <h3 class="report-section-title">Журнал ходов</h3>
+                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Событие</th>
+                                    <th>Участники</th>
+                                    <th>Потрачено</th>
+                                    <th>Вложено</th>
+                                    <th>Заработано</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <!-- ЭКРАН 7: Игровая механика "Секрет денег" -->
     <div class="screen" id="screen7">
         <div class="secret-money-game">
-            <header class="game-header">
-                <h1>Секрет денег</h1>
-                <div class="profession-name" id="secretProfessionName">Учитель</div>
-                <div class="round-indicator" id="roundIndicator">Круг 1</div>
+            <header class="game-header secret-header">
                 <button class="back-button" onclick="navigateToScreen(5)">
                     <i class="fas fa-arrow-left"></i> Назад
                 </button>
+                <div class="secret-title">
+                    <h1>Секрет денег</h1>
+                    <p id="secretRoundTitle">Круг наёмных работников</p>
+                </div>
+                <div class="profession-chip">
+                    <span class="chip-label">Профессия</span>
+                    <span class="chip-value" id="secretProfessionName">—</span>
+                </div>
             </header>
 
-            <!-- Первый круг -->
-            <div id="secretRound1" class="round-content">
-                <div class="main-stats">
-                    <div class="wallet">Кошелек: ₽<span id="secretWallet">20000</span></div>
-                    <div class="goal">Цель: накопить ₽200,000</div>
-                    <div class="progress-bar">
-                        <div class="progress" id="secretProgress"></div>
-                    </div>
-                </div>
-
-                <div class="monthly-flow">
-                    <div class="salary">Зарплата: ₽<span id="secretSalary">7000</span></div>
-                    <div class="expenses">Расходы: ₽<span id="secretExpenses">4200</span></div>
-                    <div class="profit">Прибыль: ₽<span id="secretProfit">2800</span></div>
-                </div>
-
-                <div class="actions">
-                    <button onclick="receiveSecretSalary()" class="income-btn">Получить зарплату</button>
-                    <button onclick="paySecretExpenses()" class="expense-btn">Оплатить расходы</button>
-                    <div class="custom-transaction">
-                        <input type="number" id="secretCustomAmount" placeholder="Сумма">
-                        <button onclick="addSecretCustomIncome()" class="income-btn">+ Доход</button>
-                        <button onclick="addSecretCustomExpense()" class="expense-btn">- Расход</button>
-                    </div>
-                </div>
+            <div class="secret-round-tabs" id="secretRoundTabs">
+                <button type="button" class="round-tab active" data-round="1">Круг наёмных работников</button>
+                <button type="button" class="round-tab locked" data-round="2">Круг предпринимателей</button>
+                <button type="button" class="round-tab locked" data-round="3">Круг олигархов</button>
             </div>
 
-            <!-- Второй круг -->
-            <div id="secretRound2" class="round-content" style="display: none;">
-                <div class="goal-info">
-                    <div class="goal">Цель: ₽300,000 пассивного дохода</div>
-                    <div class="current-passive">Текущий пассивный доход: ₽<span id="secretPassiveIncome">0</span></div>
-                </div>
-
-                <!-- Товарный бизнес -->
-                <section class="product-business">
-                    <h2>Товарный бизнес</h2>
-                    <div class="business-controls">
-                        <div class="pricing">
-                            <label>Цена за товар:</label>
-                            <select id="productPrice">
-                                <option value="50">₽50</option>
-                                <option value="100">₽100</option>
-                                <option value="150">₽150</option>
-                                <option value="200">₽200</option>
-                                <option value="250">₽250</option>
-                            </select>
+            <section class="secret-overview">
+                <div class="overview-card wallet-card">
+                    <h3>Кошелёк</h3>
+                    <p class="overview-value">₽<span id="secretWalletValue">0</span></p>
+                    <div class="wallet-actions">
+                        <input type="number" id="secretWalletAdjustment" placeholder="Сумма">
+                        <div class="wallet-buttons">
+                            <button type="button" class="income-btn" onclick="secretApplyWalletChange('add')">Пополнить</button>
+                            <button type="button" class="expense-btn" onclick="secretApplyWalletChange('subtract')">Списать</button>
                         </div>
-                        
-                        <div class="inventory">
-                            <label>Товар на складе:</label>
-                            <span id="inventoryAmount">100%</span>
-                        </div>
-                    </div>
-
-                    <div class="sales">
-                        <h3>Продажи</h3>
-                        <div class="sale-option">
-                            <input type="number" id="salePercent" placeholder="% товара" min="1" max="100">
-                            <input type="number" id="salePrice" placeholder="Цена продажи">
-                            <button onclick="sellProducts()">Продать</button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Расходы на склад -->
-                <section class="warehouse-expenses">
-                    <h2>Расходы на склад</h2>
-                    <div class="expense-item">
-                        <label>Содержание склада: ₽100,000</label>
-                        <button onclick="payWarehouseExpenses()" class="expense-btn">Оплатить</button>
-                    </div>
-                </section>
-
-                <!-- Сетевой маркетинг -->
-                <section class="network-marketing">
-                    <h2>Сетевой маркетинг</h2>
-                    <div class="network-income">
-                        <input type="number" id="networkIncome" placeholder="Доход от сети">
-                        <button onclick="addNetworkIncome()">Добавить доход</button>
-                        <small>*Учитывается как активный доход</small>
-                    </div>
-                </section>
-
-                <!-- Паи -->
-                <section class="shares-section">
-                    <h2>Паи</h2>
-                    <div class="shares-calculator">
-                        <label>Цены акций на сегодня:</label>
-                        <div class="stocks-input">
-                            <input type="number" id="stock1" placeholder="Акция 1">
-                            <input type="number" id="stock2" placeholder="Акция 2">
-                            <input type="number" id="stock3" placeholder="Акция 3">
-                            <input type="number" id="stock4" placeholder="Акция 4">
-                        </div>
-                        <button onclick="calculateShares()">Рассчитать пай</button>
-                        <div id="shareResult"></div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Третий круг -->
-            <div id="secretRound3" class="round-content" style="display: none;">
-                <div class="final-goals">
-                    <h2>Цели для победы</h2>
-                    <div class="goal-item">
-                        <input type="checkbox" id="finalDreamGoal">
-                        <label for="finalDreamGoal">1. Купить мечту</label>
-                    </div>
-                    <div class="goal-item">
-                        <input type="checkbox" id="finalIncomeGoal">
-                        <label for="finalIncomeGoal">2. Увеличить пассивный доход до ₽2,000,000</label>
                     </div>
                 </div>
-
-                <div class="current-status">
-                    <div class="passive-income">
-                        <label>Текущий пассивный доход:</label>
-                        <span>₽<span id="currentPassiveIncome">300000</span></span>
+                <div class="overview-card flow-card">
+                    <h3>Денежный поток круга</h3>
+                    <dl>
+                        <div>
+                            <dt>Доходы</dt>
+                            <dd>₽<span id="secretIncomeTotal">0</span></dd>
+                        </div>
+                        <div>
+                            <dt>Пассивный доход</dt>
+                            <dd>₽<span id="secretPassiveTotal">0</span></dd>
+                        </div>
+                        <div>
+                            <dt>Расходы</dt>
+                            <dd>₽<span id="secretExpenseTotal">0</span></dd>
+                        </div>
+                        <div>
+                            <dt>Чистый поток</dt>
+                            <dd>₽<span id="secretNetFlow">0</span></dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="overview-card requirement-card" id="secretRequirementCard">
+                    <h3 id="secretRequirementTitle">Цель перехода</h3>
+                    <p id="secretRequirementSubtitle">Накопите ₽200 000, чтобы открыть круг предпринимателей</p>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="secretRequirementProgress"></div>
+                    </div>
+                    <span class="progress-value" id="secretRequirementValue">0%</span>
+                </div>
+                <div class="overview-card info-card">
+                    <h3>Информация об игроке</h3>
+                    <div class="info-grid">
+                        <label>
+                            Игрок
+                            <input type="text" id="secretPlayerName" data-secret-round="1" data-secret-section="info" data-secret-field="player" placeholder="Ваше имя">
+                        </label>
+                        <label>
+                            Профессия
+                            <input type="text" id="secretProfessionField" readonly>
+                        </label>
+                        <label>
+                            Ваша мечта
+                            <input type="text" id="secretPlayerDream" data-secret-round="1" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
+                        </label>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            <section class="secret-sheets">
+                <!-- Круг 1 -->
+                <article class="secret-sheet secret-sd1 active" id="secretSheet1" data-round="1">
+                    <header class="secret-sheet-header">
+                        <div class="sheet-code">СД-1</div>
+                        <div class="sheet-header-grid">
+                            <label class="sheet-field">
+                                <span>Игрок</span>
+                                <input type="text" id="secretPlayerNameRound1" data-secret-round="1" data-secret-section="info" data-secret-field="player" placeholder="Ваше имя">
+                            </label>
+                            <label class="sheet-field">
+                                <span>Профессия</span>
+                                <input type="text" id="secretProfessionRound1" readonly>
+                            </label>
+                            <label class="sheet-field">
+                                <span>Ваша мечта</span>
+                                <input type="text" id="secretDreamRound1" data-secret-round="1" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
+                            </label>
+                        </div>
+                    </header>
+                    <div class="secret-sheet-panels">
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши активы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Актив</th>
+                                            <th>Цена</th>
+                                            <th>Кол-во</th>
+                                            <th>Доход</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound1Assets"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого доходов</span>
+                                <strong>₽<span id="secretRound1IncomeTotal">0</span></strong>
+                            </footer>
+                        </section>
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши пассивы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Пассив</th>
+                                            <th>Сумма</th>
+                                            <th>Платёж</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound1Passives"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого расходы</span>
+                                <strong>₽<span id="secretRound1ExpenseTotal">0</span></strong>
+                            </footer>
+                        </section>
+                    </div>
+                    <footer class="secret-sheet-notebook">
+                        <div class="notebook-title">Учетная книга (заметки и записи)</div>
+                        <textarea id="secretRound1Notes" data-secret-round="1" data-secret-section="notes" data-secret-field="text" placeholder="Фиксируйте все финансовые события круга наёмных работников"></textarea>
+                    </footer>
+                    <div class="secret-sheet-goals">
+                        <div class="goal-card">Создайте сбережения 200 000 ₽</div>
+                        <div class="goal-card">Ведите учёт активов и пассивов</div>
+                        <div class="goal-card">Готовьтесь к переходу во 2 круг</div>
+                    </div>
+                </article>
+
+                <!-- Круг 2 -->
+                <article class="secret-sheet secret-sd2" id="secretSheet2" data-round="2">
+                    <header class="secret-sheet-header">
+                        <div class="sheet-code">СД-2</div>
+                        <div class="sheet-header-grid">
+                            <label class="sheet-field">
+                                <span>Игрок</span>
+                                <input type="text" id="secretPlayerNameRound2" data-secret-round="2" data-secret-section="info" data-secret-field="player" placeholder="Ваше имя">
+                            </label>
+                            <label class="sheet-field">
+                                <span>Профессия</span>
+                                <input type="text" id="secretProfessionRound2" readonly>
+                            </label>
+                            <label class="sheet-field">
+                                <span>Ваша мечта</span>
+                                <input type="text" id="secretDreamRound2" data-secret-round="2" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
+                            </label>
+                        </div>
+                    </header>
+                    <div class="secret-sheet-panels">
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши активы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Актив</th>
+                                            <th>Цена</th>
+                                            <th>Доход</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound2Assets"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого доходов</span>
+                                <strong>₽<span id="secretRound2IncomeTotal">0</span></strong>
+                            </footer>
+                        </section>
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши пассивы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Пассив</th>
+                                            <th>Сумма</th>
+                                            <th>Платёж</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound2Passives"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого расходы</span>
+                                <strong>₽<span id="secretRound2ExpenseTotal">0</span></strong>
+                            </footer>
+                        </section>
+                    </div>
+                    <section class="sheet-panel full-width">
+                        <div class="panel-title with-action">
+                            <span>Круг предпринимателей</span>
+                            <button type="button" class="ghost-btn" onclick="addSecretBusiness(2)">Добавить бизнес</button>
+                        </div>
+                        <div class="panel-table">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Инвестиции</th>
+                                        <th>Доход</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secretRound2Businesses"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <footer class="secret-sheet-notebook">
+                        <div class="notebook-title">Учетная книга (заметки и записи)</div>
+                        <textarea id="secretRound2Notes" data-secret-round="2" data-secret-section="notes" data-secret-field="text" placeholder="Фиксируйте шаги на круге предпринимателей"></textarea>
+                    </footer>
+                    <div class="secret-sheet-goals">
+                        <div class="goal-card">Сформируйте устойчивый доход</div>
+                        <div class="goal-card">Учитывайте расходы на склад 100 000 ₽</div>
+                        <div class="goal-card">Достигните пассивного дохода 300 000 ₽</div>
+                    </div>
+                </article>
+
+                <!-- Круг 3 -->
+                <article class="secret-sheet secret-sd2" id="secretSheet3" data-round="3">
+                    <header class="secret-sheet-header">
+                        <div class="sheet-code">СД-2</div>
+                        <div class="sheet-header-grid">
+                            <label class="sheet-field">
+                                <span>Игрок</span>
+                                <input type="text" id="secretPlayerNameRound3" data-secret-round="3" data-secret-section="info" data-secret-field="player" placeholder="Ваше имя">
+                            </label>
+                            <label class="sheet-field">
+                                <span>Профессия</span>
+                                <input type="text" id="secretProfessionRound3" readonly>
+                            </label>
+                            <label class="sheet-field">
+                                <span>Ваша мечта</span>
+                                <input type="text" id="secretDreamRound3" data-secret-round="3" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
+                            </label>
+                        </div>
+                    </header>
+                    <div class="secret-sheet-panels">
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши активы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Актив</th>
+                                            <th>Цена</th>
+                                            <th>Доход</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound3Assets"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого доходов</span>
+                                <strong>₽<span id="secretRound3IncomeTotal">0</span></strong>
+                            </footer>
+                        </section>
+                        <section class="sheet-panel">
+                            <header class="panel-title">Ваши пассивы</header>
+                            <div class="panel-table">
+                                <table class="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Пассив</th>
+                                            <th>Сумма</th>
+                                            <th>Платёж</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound3Passives"></tbody>
+                                </table>
+                            </div>
+                            <footer class="panel-footer">
+                                <span>Итого расходы</span>
+                                <strong>₽<span id="secretRound3ExpenseTotal">0</span></strong>
+                            </footer>
+                        </section>
+                    </div>
+                    <section class="sheet-panel full-width">
+                        <div class="panel-title with-action">
+                            <span>Круг свой бизнес</span>
+                            <button type="button" class="ghost-btn" onclick="addSecretBusiness(3)">Добавить бизнес</button>
+                        </div>
+                        <div class="panel-table">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Инвестиции</th>
+                                        <th>Доход</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secretRound3Businesses"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section class="sheet-panel full-width">
+                        <div class="panel-title with-action">
+                            <span>Круг олигархов</span>
+                            <button type="button" class="ghost-btn" onclick="addSecretOligarchAsset()">Добавить актив</button>
+                        </div>
+                        <div class="panel-table">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Предприятие / мечта</th>
+                                        <th>Цена</th>
+                                        <th>Пассивный доход</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secretRound3Oligarchs"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <footer class="secret-sheet-notebook">
+                        <div class="notebook-title">Учетная книга (заметки и записи)</div>
+                        <textarea id="secretRound3Notes" data-secret-round="3" data-secret-section="notes" data-secret-field="text" placeholder="Подведите итог своего пути к олигархам"></textarea>
+                    </footer>
+                    <div class="secret-sheet-goals">
+                        <div class="goal-card">Укрепляйте пассивный доход</div>
+                        <div class="goal-card">Инвестируйте в крупные активы</div>
+                        <div class="goal-card">Достигните мечты олигарха</div>
+                    </div>
+                </article>
+            </section>
         </div>
     </div>
 

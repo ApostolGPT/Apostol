@@ -298,6 +298,91 @@ const secretOfMoneyProfessions = [
   {name: "Директор", icon: "👔", salary: 80000, expenses: 60000, profit: 20000, savings: 5000}
 ];
 
+const SECRET_ROUND_CONFIG = {
+  1: {
+    label: 'Круг наёмных работников',
+    requirement: {
+      type: 'wallet',
+      target: 200000,
+      description: 'Накопите ₽200 000, чтобы открыть круг предпринимателей'
+    },
+    sheetType: 'sd1',
+    assets: [
+      { key: 'salary', label: 'Заработная плата', hasQuantity: true, defaultQuantity: 1 },
+      { key: 'additionalIncome', label: 'Доп. доходы', hasQuantity: true },
+      { key: 'sideJob', label: 'Подработка', hasQuantity: true },
+      { key: 'networkBusiness', label: 'Сетевой бизнес', hasQuantity: true },
+      { key: 'readyStock', label: 'Склад готовой продукции', hasQuantity: true },
+      { key: 'construction', label: 'Строительство', hasQuantity: true },
+      { key: 'trade', label: 'Торговля', hasQuantity: true },
+      { key: 'services', label: 'Услуги', hasQuantity: true }
+    ],
+    passives: [
+      { key: 'consumerLoan1', label: 'Потреб. кредит 1' },
+      { key: 'consumerLoan2', label: 'Потреб. кредит 2' },
+      { key: 'constructionExpense', label: 'Строительство' },
+      { key: 'tradeExpense', label: 'Торговля' },
+      { key: 'servicesExpense', label: 'Услуги' },
+      { key: 'childExpense1', label: 'Покупка детей 1' },
+      { key: 'childExpense2', label: 'Покупка детей 2' },
+      { key: 'childExpense3', label: 'Покупка детей 3' },
+      { key: 'childExpense4', label: 'Покупка детей 4' },
+      { key: 'charity', label: 'Пожертвования' }
+    ]
+  },
+  2: {
+    label: 'Круг предпринимателей',
+    requirement: {
+      type: 'passive',
+      target: 300000,
+      description: 'Сформируйте пассивный доход минимум ₽300 000, чтобы выйти в круг олигархов'
+    },
+    sheetType: 'sd2',
+    assets: [
+      { key: 'salary', label: 'Зарплата', lockIncome: true, lockPrice: true },
+      { key: 'businessIncome', label: 'Доходы от бизнеса', countsTowardPassive: true },
+      { key: 'investments', label: 'Инвестиции', countsTowardPassive: true },
+      { key: 'dividends', label: 'Дивиденды', countsTowardPassive: true },
+      { key: 'realEstate', label: 'Недвижимость', countsTowardPassive: true },
+      { key: 'warehouse1', label: 'Склад 1', countsTowardPassive: true },
+      { key: 'warehouse2', label: 'Склад 2', countsTowardPassive: true },
+      { key: 'warehouse3', label: 'Склад 3', countsTowardPassive: true },
+      { key: 'savings', label: 'Накопления' }
+    ],
+    passives: [
+      { key: 'warehouseExpense', label: 'Содержание склада', defaultPayment: 100000, lockPayment: true },
+      { key: 'logistics', label: 'Логистика и операционные расходы' },
+      { key: 'debtRepayment', label: 'Погашение кредитов' },
+      { key: 'charity', label: 'Пожертвования' }
+    ],
+    businessList: true
+  },
+  3: {
+    label: 'Круг олигархов',
+    sheetType: 'sd2',
+    inheritFrom: 2,
+    assets: [
+      { key: 'salary', label: 'Зарплата', lockIncome: true, lockPrice: true },
+      { key: 'businessIncome', label: 'Доходы от бизнеса', countsTowardPassive: true },
+      { key: 'investments', label: 'Инвестиции', countsTowardPassive: true },
+      { key: 'dividends', label: 'Дивиденды', countsTowardPassive: true },
+      { key: 'realEstate', label: 'Недвижимость', countsTowardPassive: true },
+      { key: 'warehouse1', label: 'Склад 1', countsTowardPassive: true },
+      { key: 'warehouse2', label: 'Склад 2', countsTowardPassive: true },
+      { key: 'warehouse3', label: 'Склад 3', countsTowardPassive: true },
+      { key: 'savings', label: 'Накопления' }
+    ],
+    passives: [
+      { key: 'warehouseExpense', label: 'Содержание склада', defaultPayment: 100000, lockPayment: true },
+      { key: 'logistics', label: 'Логистика и операционные расходы' },
+      { key: 'debtRepayment', label: 'Погашение кредитов' },
+      { key: 'charity', label: 'Пожертвования' }
+    ],
+    businessList: true,
+    oligarchList: true
+  }
+};
+
 const LIABILITY_LABELS = {
   homeMortgage: 'Ипотека на дом',
   schoolLoan: 'Кредит на обучение',
@@ -349,6 +434,11 @@ function formatCurrency(amount) {
 function formatMoneyDisplay(amount) {
   const numeric = Number(amount) || 0;
   return numeric === 0 ? '—' : `$${numeric.toLocaleString()}`;
+}
+
+function formatRub(amount) {
+  const numeric = Number(amount) || 0;
+  return numeric.toLocaleString('ru-RU');
 }
 
 function ensureTurnStats() {
@@ -413,6 +503,218 @@ function registerTurn(actionType, label, details = {}) {
   return entry;
 }
 
+function createEmptySecretState() {
+  return {
+    round: 1,
+    unlockedRounds: [1],
+    playerInfo: {
+      player: '',
+      profession: '',
+      dream: ''
+    },
+    sheets: {},
+    passiveIncome: 0,
+    warehouseFeeDeducted: false
+  };
+}
+
+function ensureSecretState(state) {
+  const base = createEmptySecretState();
+  const source = state && typeof state === 'object' ? state : {};
+
+  const normalized = {
+    ...base,
+    ...source,
+    playerInfo: {
+      ...base.playerInfo,
+      ...(source.playerInfo || {})
+    },
+    sheets: source.sheets && typeof source.sheets === 'object' ? { ...source.sheets } : {},
+    unlockedRounds: Array.isArray(source.unlockedRounds) && source.unlockedRounds.length
+      ? Array.from(new Set(source.unlockedRounds.map(r => Number(r) || 1)))
+      : [1]
+  };
+
+  normalized.round = Number(source.round) || 1;
+  if (!normalized.unlockedRounds.includes(normalized.round)) {
+    normalized.round = Math.max(...normalized.unlockedRounds);
+  }
+
+  normalized.passiveIncome = Number(source.passiveIncome) || 0;
+  normalized.warehouseFeeDeducted = !!source.warehouseFeeDeducted;
+
+  return normalized;
+}
+
+let secretEntryCounter = 0;
+
+function generateSecretEntryId(prefix = 'entry') {
+  secretEntryCounter += 1;
+  return `${prefix}-${Date.now()}-${secretEntryCounter}`;
+}
+
+function deepCloneSecretSheet(baseSheet) {
+  const clone = {
+    assets: {},
+    passives: {},
+    notes: baseSheet?.notes || ''
+  };
+
+  if (baseSheet && typeof baseSheet === 'object') {
+    if (baseSheet.assets && typeof baseSheet.assets === 'object') {
+      Object.entries(baseSheet.assets).forEach(([key, value]) => {
+        clone.assets[key] = { ...value };
+      });
+    }
+
+    if (baseSheet.passives && typeof baseSheet.passives === 'object') {
+      Object.entries(baseSheet.passives).forEach(([key, value]) => {
+        clone.passives[key] = { ...value };
+      });
+    }
+
+    if (Array.isArray(baseSheet.businesses)) {
+      clone.businesses = baseSheet.businesses.map(entry => ({ ...entry }));
+    }
+
+    if (Array.isArray(baseSheet.oligarchs)) {
+      clone.oligarchs = baseSheet.oligarchs.map(entry => ({ ...entry }));
+    }
+  }
+
+  return clone;
+}
+
+function createSecretSheetFromConfig(config) {
+  const sheet = {
+    assets: {},
+    passives: {},
+    notes: ''
+  };
+
+  applySecretConfigDefaults(sheet, config);
+  return sheet;
+}
+
+function applySecretConfigDefaults(sheet, config) {
+  if (!sheet.assets || typeof sheet.assets !== 'object') {
+    sheet.assets = {};
+  }
+
+  if (!sheet.passives || typeof sheet.passives !== 'object') {
+    sheet.passives = {};
+  }
+
+  config.assets.forEach(item => {
+    if (!sheet.assets[item.key]) {
+      sheet.assets[item.key] = {
+        price: Number(item.defaultPrice) || 0,
+        quantity: item.hasQuantity ? Number(item.defaultQuantity ?? 0) : 1,
+        income: Number(item.defaultIncome) || 0
+      };
+    } else {
+      const existing = sheet.assets[item.key];
+      existing.price = Number(existing.price) || 0;
+      existing.quantity = item.hasQuantity ? Number(existing.quantity ?? 0) : 1;
+      existing.income = Number(existing.income) || 0;
+    }
+  });
+
+  config.passives.forEach(item => {
+    if (!sheet.passives[item.key]) {
+      sheet.passives[item.key] = {
+        amount: Number(item.defaultAmount) || 0,
+        payment: Number(item.defaultPayment) || 0
+      };
+    } else {
+      const existing = sheet.passives[item.key];
+      existing.amount = Number(existing.amount) || 0;
+      if (existing.payment == null) {
+        existing.payment = Number(item.defaultPayment) || 0;
+      } else {
+        existing.payment = Number(existing.payment) || 0;
+      }
+    }
+  });
+
+  if (config.businessList) {
+    if (!Array.isArray(sheet.businesses)) {
+      sheet.businesses = [];
+    }
+    if (sheet.businesses.length === 0) {
+      sheet.businesses.push(createEmptySecretBusiness());
+    }
+  }
+
+  if (!config.businessList) {
+    delete sheet.businesses;
+  }
+
+  if (config.oligarchList) {
+    if (!Array.isArray(sheet.oligarchs)) {
+      sheet.oligarchs = [];
+    }
+    if (sheet.oligarchs.length === 0) {
+      sheet.oligarchs.push(createEmptySecretOligarchEntry());
+    }
+  }
+
+  if (!config.oligarchList) {
+    delete sheet.oligarchs;
+  }
+
+  return sheet;
+}
+
+function ensureSecretSheet(round) {
+  const config = SECRET_ROUND_CONFIG[round];
+  if (!config) {
+    return null;
+  }
+
+  gameData.secretData = ensureSecretState(gameData.secretData);
+  const secretState = gameData.secretData;
+
+  if (!secretState.sheets[round]) {
+    if (config.inheritFrom) {
+      const base = ensureSecretSheet(config.inheritFrom) || createSecretSheetFromConfig(SECRET_ROUND_CONFIG[config.inheritFrom]);
+      secretState.sheets[round] = deepCloneSecretSheet(base);
+    } else {
+      secretState.sheets[round] = createSecretSheetFromConfig(config);
+    }
+  }
+
+  const sheet = secretState.sheets[round];
+  applySecretConfigDefaults(sheet, config);
+  return sheet;
+}
+
+function ensureSecretBaseSheets() {
+  ensureSecretSheet(1);
+  ensureSecretSheet(2);
+  if (gameData.secretData.unlockedRounds?.includes(3)) {
+    ensureSecretSheet(3);
+  }
+}
+
+function createEmptySecretBusiness() {
+  return {
+    id: generateSecretEntryId('business'),
+    name: '',
+    cost: 0,
+    income: 0
+  };
+}
+
+function createEmptySecretOligarchEntry() {
+  return {
+    id: generateSecretEntryId('oligarch'),
+    name: '',
+    cost: 0,
+    income: 0
+  };
+}
+
 function ensureStageTwoState() {
   if (!gameData.stageTwoState) {
     gameData.stageTwoState = {
@@ -451,11 +753,7 @@ let gameData = {
   children: 0,
   round: 1,
   turnStats: createEmptyTurnStats(),
-  secretData: {
-    inventory: 100,
-    passiveIncome: 0,
-    networkIncome: 0
-  },
+  secretData: createEmptySecretState(),
   stageTwoState: {
     manualPassive: 0,
     businesses: [],
@@ -687,6 +985,24 @@ function setupEventListeners() {
         stage2DreamDisplay.textContent = dreamValue;
       }
     });
+  }
+
+  const secretTabs = document.getElementById('secretRoundTabs');
+  if (secretTabs) {
+    secretTabs.addEventListener('click', event => {
+      const button = event.target.closest('[data-round]');
+      if (!button) return;
+      const round = Number(button.dataset.round);
+      if (Number.isNaN(round)) return;
+      if (button.disabled) return;
+      setSecretRound(round);
+    });
+  }
+
+  const secretContainer = document.querySelector('.secret-money-game');
+  if (secretContainer) {
+    secretContainer.addEventListener('input', handleSecretFieldInput);
+    secretContainer.addEventListener('change', handleSecretFieldInput);
   }
 
   // Автосохранение каждые 30 секунд
@@ -2607,205 +2923,635 @@ function closeFinalReport() {
 
 function initializeSecretGame() {
   if (!selectedProfession) return;
-  
-  // Инициализация игровых данных
-  gameData.wallet = selectedProfession.savings;
-  gameData.secretData = {
-    inventory: 100,
-    passiveIncome: 0,
-    networkIncome: 0,
-    round: 1
-  };
-  
-  updateSecretDisplay();
-}
 
-function updateSecretDisplay() {
-  if (!selectedProfession) return;
-  
-  // Обновить название профессии
-  document.getElementById('secretProfessionName').textContent = selectedProfession.name;
-  
-  // Обновить основные показатели
-  document.getElementById('secretWallet').textContent = gameData.wallet.toLocaleString();
-  document.getElementById('secretSalary').textContent = selectedProfession.salary.toLocaleString();
-  document.getElementById('secretExpenses').textContent = selectedProfession.expenses.toLocaleString();
-  document.getElementById('secretProfit').textContent = selectedProfession.profit.toLocaleString();
-  
-  // Обновить прогресс-бар
-  updateSecretProgress();
-}
+  gameData.secretData = ensureSecretState(createEmptySecretState());
+  gameData.secretData.round = 1;
+  gameData.secretData.unlockedRounds = [1];
+  gameData.secretData.passiveIncome = 0;
+  gameData.secretData.warehouseFeeDeducted = false;
 
-function updateSecretProgress() {
-  const target = gameData.secretData.round === 1 ? 200000 : 300000;
-  const current = gameData.secretData.round === 1 ? gameData.wallet : gameData.secretData.passiveIncome;
-  const progress = Math.min((current / target) * 100, 100);
-  
-  const progressBar = document.getElementById('secretProgress');
-  if (progressBar) {
-    progressBar.style.width = `${progress}%`;
+  gameData.wallet = Number(selectedProfession.savings) || 0;
+  gameData.secretData.playerInfo.profession = selectedProfession.name;
+  if (!gameData.secretData.playerInfo.player && currentUser && currentUser.nickname) {
+    gameData.secretData.playerInfo.player = currentUser.nickname;
   }
-  
-  // Проверить переход на следующий круг
-  if (progress >= 100) {
-    checkSecretRoundTransition();
-  }
+
+  ensureSecretBaseSheets();
+  applySecretProfessionDefaults();
+  renderSecretSheets();
+  syncSecretInfoFields();
+  renderSecretRoundTabs();
+  setSecretRound(1, { silent: true });
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
 }
 
-function receiveSecretSalary() {
-  gameData.wallet += selectedProfession.salary;
-  updateSecretDisplay();
-  showModal('Зарплата получена', `+₽${selectedProfession.salary.toLocaleString()}`);
-}
-
-function paySecretExpenses() {
-  if (gameData.wallet < selectedProfession.expenses) {
-    showModal('Ошибка', 'Недостаточно средств для оплаты расходов');
+function applySecretProfessionDefaults() {
+  if (!selectedProfession) {
     return;
   }
-  
-  gameData.wallet -= selectedProfession.expenses;
-  updateSecretDisplay();
-  showModal('Расходы оплачены', `-₽${selectedProfession.expenses.toLocaleString()}`);
+
+  const salary = Number(selectedProfession.salary) || 0;
+  const sheet1 = ensureSecretSheet(1);
+  if (sheet1 && sheet1.assets?.salary) {
+    sheet1.assets.salary.income = salary;
+    sheet1.assets.salary.price = salary;
+    sheet1.assets.salary.quantity = sheet1.assets.salary.quantity ?? 1;
+  }
+
+  const sheet2 = ensureSecretSheet(2);
+  if (sheet2 && sheet2.assets?.salary) {
+    sheet2.assets.salary.income = 0;
+    sheet2.assets.salary.price = 0;
+  }
+
+  if (gameData.secretData.unlockedRounds?.includes(3)) {
+    const sheet3 = ensureSecretSheet(3);
+    if (sheet3 && sheet3.assets?.salary) {
+      sheet3.assets.salary.income = 0;
+      sheet3.assets.salary.price = 0;
+    }
+  }
 }
 
-function addSecretCustomIncome() {
-  const amount = parseFloat(document.getElementById('secretCustomAmount').value);
-  
+function renderSecretSheets() {
+  const rounds = [1, 2];
+  if (gameData.secretData.unlockedRounds?.includes(3)) {
+    rounds.push(3);
+  }
+
+  rounds.forEach(round => {
+    ensureSecretSheet(round);
+    renderSecretSheet(round);
+    updateSecretSheetTotals(round);
+  });
+
+  if (!gameData.secretData.unlockedRounds?.includes(3)) {
+    clearSecretSheetDom(3);
+  }
+}
+
+function clearSecretSheetDom(round) {
+  const assetsBody = document.getElementById(`secretRound${round}Assets`);
+  const passivesBody = document.getElementById(`secretRound${round}Passives`);
+  if (assetsBody) assetsBody.innerHTML = '';
+  if (passivesBody) passivesBody.innerHTML = '';
+
+  const businessBody = document.getElementById(`secretRound${round}Businesses`);
+  if (businessBody) businessBody.innerHTML = '';
+
+  const oligarchBody = document.getElementById('secretRound3Oligarchs');
+  if (round === 3 && oligarchBody) oligarchBody.innerHTML = '';
+
+  const notes = document.getElementById(`secretRound${round}Notes`);
+  if (notes) notes.value = '';
+
+  const incomeSpan = document.getElementById(`secretRound${round}IncomeTotal`);
+  const expenseSpan = document.getElementById(`secretRound${round}ExpenseTotal`);
+  if (incomeSpan) incomeSpan.textContent = '0';
+  if (expenseSpan) expenseSpan.textContent = '0';
+}
+
+function renderSecretSheet(round) {
+  const config = SECRET_ROUND_CONFIG[round];
+  const sheet = ensureSecretSheet(round);
+  if (!config || !sheet) {
+    return;
+  }
+
+  renderSecretAssetsTable(round, sheet, config);
+  renderSecretPassivesTable(round, sheet, config);
+
+  if (config.businessList) {
+    renderSecretBusinessTable(round, sheet);
+  }
+
+  if (config.oligarchList) {
+    renderSecretOligarchTable(sheet);
+  }
+
+  const notesField = document.getElementById(`secretRound${round}Notes`);
+  if (notesField && sheet.notes !== undefined) {
+    if (document.activeElement !== notesField) {
+      notesField.value = sheet.notes;
+    }
+  }
+}
+
+function renderSecretAssetsTable(round, sheet, config) {
+  const body = document.getElementById(`secretRound${round}Assets`);
+  if (!body) return;
+
+  body.innerHTML = '';
+  config.assets.forEach(item => {
+    const values = sheet.assets[item.key] || { price: 0, quantity: item.hasQuantity ? 0 : 1, income: 0 };
+    const row = document.createElement('tr');
+
+    const priceField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="price" value="${values.price || 0}" ${item.lockPrice ? 'readonly' : ''}>`;
+    const incomeField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="income" value="${values.income || 0}" ${item.lockIncome ? 'readonly' : ''}>`;
+
+    let quantityCell = '';
+    if (config.sheetType === 'sd1' && item.hasQuantity) {
+      quantityCell = `<td><input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="quantity" value="${values.quantity || 0}"></td>`;
+    }
+
+    row.innerHTML = `
+      <th>${item.label}</th>
+      <td>${priceField}</td>
+      ${quantityCell || (config.sheetType === 'sd1' ? '<td></td>' : '')}
+      <td>${incomeField}</td>
+    `;
+
+    body.appendChild(row);
+  });
+}
+
+function renderSecretPassivesTable(round, sheet, config) {
+  const body = document.getElementById(`secretRound${round}Passives`);
+  if (!body) return;
+
+  body.innerHTML = '';
+  config.passives.forEach(item => {
+    const values = sheet.passives[item.key] || { amount: 0, payment: 0 };
+    const amountField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="passives" data-secret-key="${item.key}" data-secret-field="amount" value="${values.amount || 0}" ${item.lockAmount ? 'readonly' : ''}>`;
+    const paymentField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="passives" data-secret-key="${item.key}" data-secret-field="payment" value="${values.payment || 0}" ${item.lockPayment ? 'readonly' : ''}>`;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <th>${item.label}</th>
+      <td>${amountField}</td>
+      <td>${paymentField}</td>
+    `;
+
+    body.appendChild(row);
+  });
+}
+
+function renderSecretBusinessTable(round, sheet) {
+  const body = document.getElementById(`secretRound${round}Businesses`);
+  if (!body) return;
+
+  if (!Array.isArray(sheet.businesses) || sheet.businesses.length === 0) {
+    sheet.businesses = [createEmptySecretBusiness()];
+  }
+
+  body.innerHTML = sheet.businesses.map(entry => `
+    <tr data-entry-id="${entry.id}">
+      <td><input type="text" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="name" value="${entry.name || ''}" placeholder="Название"></td>
+      <td><input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="cost" value="${entry.cost || 0}"></td>
+      <td><input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}"></td>
+      <td><button type="button" onclick="removeSecretBusiness(${round}, '${entry.id}')">Удалить</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderSecretOligarchTable(sheet) {
+  const body = document.getElementById('secretRound3Oligarchs');
+  if (!body) return;
+
+  if (!Array.isArray(sheet.oligarchs) || sheet.oligarchs.length === 0) {
+    sheet.oligarchs = [createEmptySecretOligarchEntry()];
+  }
+
+  body.innerHTML = sheet.oligarchs.map(entry => `
+    <tr data-entry-id="${entry.id}">
+      <td><input type="text" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="name" value="${entry.name || ''}" placeholder="Актив или мечта"></td>
+      <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="cost" value="${entry.cost || 0}"></td>
+      <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}"></td>
+      <td><button type="button" onclick="removeSecretOligarchAsset('${entry.id}')">Удалить</button></td>
+    </tr>
+  `).join('');
+}
+
+function updateSecretSheetTotals(round) {
+  const totals = calculateSecretRoundTotals(round);
+  const incomeSpan = document.getElementById(`secretRound${round}IncomeTotal`);
+  const expenseSpan = document.getElementById(`secretRound${round}ExpenseTotal`);
+
+  if (incomeSpan) {
+    incomeSpan.textContent = formatRub(totals.income);
+  }
+
+  if (expenseSpan) {
+    expenseSpan.textContent = formatRub(totals.expenses);
+  }
+}
+
+function calculateSecretRoundTotals(round) {
+  const config = SECRET_ROUND_CONFIG[round];
+  const sheet = ensureSecretSheet(round);
+  if (!config || !sheet) {
+    return { income: 0, passiveIncome: 0, expenses: 0, net: 0 };
+  }
+
+  let income = 0;
+  let passiveIncome = 0;
+
+  config.assets.forEach(item => {
+    const row = sheet.assets[item.key] || {};
+    const rowIncome = Number(row.income) || 0;
+    income += rowIncome;
+    if (item.countsTowardPassive) {
+      passiveIncome += rowIncome;
+    }
+  });
+
+  if (config.businessList && Array.isArray(sheet.businesses)) {
+    sheet.businesses.forEach(entry => {
+      const businessIncome = Number(entry.income) || 0;
+      income += businessIncome;
+      passiveIncome += businessIncome;
+    });
+  }
+
+  if (config.oligarchList && Array.isArray(sheet.oligarchs)) {
+    sheet.oligarchs.forEach(entry => {
+      const oligarchIncome = Number(entry.income) || 0;
+      income += oligarchIncome;
+      passiveIncome += oligarchIncome;
+    });
+  }
+
+  let expenses = 0;
+  Object.values(sheet.passives || {}).forEach(value => {
+    const payment = Number(value.payment) || 0;
+    expenses += payment;
+  });
+
+  const net = income - expenses;
+  return { income, passiveIncome, expenses, net };
+}
+
+function updateSecretSummary() {
+  gameData.secretData = ensureSecretState(gameData.secretData);
+  const activeRound = gameData.secretData.round;
+  const totals = calculateSecretRoundTotals(activeRound);
+  gameData.secretData.passiveIncome = totals.passiveIncome;
+
+  const walletSpan = document.getElementById('secretWalletValue');
+  if (walletSpan) {
+    walletSpan.textContent = formatRub(gameData.wallet);
+  }
+
+  const incomeSpan = document.getElementById('secretIncomeTotal');
+  const passiveSpan = document.getElementById('secretPassiveTotal');
+  const expenseSpan = document.getElementById('secretExpenseTotal');
+  const netSpan = document.getElementById('secretNetFlow');
+
+  if (incomeSpan) incomeSpan.textContent = formatRub(totals.income);
+  if (passiveSpan) passiveSpan.textContent = formatRub(totals.passiveIncome);
+  if (expenseSpan) expenseSpan.textContent = formatRub(totals.expenses);
+  if (netSpan) netSpan.textContent = formatRub(totals.net);
+
+  const requirementInfo = getSecretRequirementInfo();
+  const card = document.getElementById('secretRequirementCard');
+  if (card) {
+    if (!requirementInfo) {
+      card.style.display = 'none';
+    } else {
+      card.style.display = '';
+      const { requirement, current } = requirementInfo;
+      const title = document.getElementById('secretRequirementTitle');
+      const subtitle = document.getElementById('secretRequirementSubtitle');
+      const progressBar = document.getElementById('secretRequirementProgress');
+      const value = document.getElementById('secretRequirementValue');
+
+      if (title) {
+        title.textContent = 'Цель перехода';
+      }
+      if (subtitle) {
+        subtitle.textContent = requirement.description;
+      }
+
+      const progress = Math.max(0, Math.min(100, (current / requirement.target) * 100));
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+      }
+      if (value) {
+        value.textContent = `${progress.toFixed(0)}% (₽${formatRub(current)} из ₽${formatRub(requirement.target)})`;
+      }
+    }
+  }
+
+  const title = document.getElementById('secretRoundTitle');
+  if (title) {
+    const config = SECRET_ROUND_CONFIG[activeRound];
+    title.textContent = config ? config.label : 'Секрет денег';
+  }
+
+  renderSecretRoundTabs();
+  syncSecretInfoFields();
+}
+
+function getSecretRequirementInfo() {
+  const secret = ensureSecretState(gameData.secretData);
+  if (!secret.unlockedRounds.includes(2)) {
+    return {
+      requirement: SECRET_ROUND_CONFIG[1].requirement,
+      current: gameData.wallet
+    };
+  }
+
+  if (!secret.unlockedRounds.includes(3)) {
+    const totals = calculateSecretRoundTotals(2);
+    return {
+      requirement: SECRET_ROUND_CONFIG[2].requirement,
+      current: totals.passiveIncome
+    };
+  }
+
+  return null;
+}
+
+function renderSecretRoundTabs() {
+  const tabsContainer = document.getElementById('secretRoundTabs');
+  if (!tabsContainer) return;
+
+  const secret = ensureSecretState(gameData.secretData);
+  const buttons = tabsContainer.querySelectorAll('[data-round]');
+  buttons.forEach(button => {
+    const round = Number(button.dataset.round);
+    const unlocked = secret.unlockedRounds.includes(round);
+    button.classList.toggle('active', secret.round === round);
+    button.classList.toggle('locked', !unlocked);
+    button.disabled = !unlocked;
+  });
+}
+
+function setSecretRound(round, options = {}) {
+  const secret = ensureSecretState(gameData.secretData);
+  if (!secret.unlockedRounds.includes(round)) {
+    const requirement = SECRET_ROUND_CONFIG[Math.max(1, round - 1)]?.requirement;
+    const message = requirement ? requirement.description : 'Выполните условия предыдущего круга, чтобы продолжить.';
+    showModal('Круг ещё закрыт', message);
+    return;
+  }
+
+  secret.round = round;
+  gameData.secretData = secret;
+
+  document.querySelectorAll('.secret-sheet').forEach(section => {
+    const sectionRound = Number(section.dataset.round);
+    section.classList.toggle('active', sectionRound === round);
+  });
+
+  renderSecretRoundTabs();
+  updateSecretSummary();
+  if (!options.silent) {
+    saveGameData();
+  }
+}
+
+function syncSecretInfoFields() {
+  const secret = ensureSecretState(gameData.secretData);
+  const playerName = secret.playerInfo.player || '';
+  const dream = secret.playerInfo.dream || '';
+  const profession = secret.playerInfo.profession || (selectedProfession ? selectedProfession.name : '');
+
+  document.querySelectorAll('[data-secret-section="info"][data-secret-field="player"]').forEach(input => {
+    if (input !== document.activeElement) {
+      input.value = playerName;
+    }
+  });
+
+  document.querySelectorAll('[data-secret-section="info"][data-secret-field="dream"]').forEach(input => {
+    if (input !== document.activeElement) {
+      input.value = dream;
+    }
+  });
+
+  const professionFields = [
+    'secretProfessionField',
+    'secretProfessionRound1',
+    'secretProfessionRound2',
+    'secretProfessionRound3'
+  ];
+
+  professionFields.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.value = profession;
+    }
+  });
+
+  const headerProfession = document.getElementById('secretProfessionName');
+  if (headerProfession) {
+    headerProfession.textContent = profession || '—';
+  }
+}
+
+function handleSecretFieldInput(event) {
+  const target = event.target;
+  if (!target.dataset || !target.dataset.secretSection) {
+    return;
+  }
+
+  const section = target.dataset.secretSection;
+  const round = Number(target.dataset.secretRound) || gameData.secretData.round;
+  const sheet = ensureSecretSheet(round);
+
+  if (!sheet) {
+    return;
+  }
+
+  if (section === 'assets') {
+    const key = target.dataset.secretKey;
+    if (!sheet.assets[key]) {
+      sheet.assets[key] = { price: 0, quantity: 0, income: 0 };
+    }
+    const field = target.dataset.secretField;
+    sheet.assets[key][field] = Number(target.value) || 0;
+  } else if (section === 'passives') {
+    const key = target.dataset.secretKey;
+    if (!sheet.passives[key]) {
+      sheet.passives[key] = { amount: 0, payment: 0 };
+    }
+    const field = target.dataset.secretField;
+    sheet.passives[key][field] = Number(target.value) || 0;
+  } else if (section === 'businesses') {
+    const entryId = target.dataset.secretEntry;
+    const field = target.dataset.secretField;
+    const entry = (sheet.businesses || []).find(item => item.id === entryId);
+    if (entry) {
+      if (field === 'name') {
+        entry.name = target.value;
+      } else if (field === 'cost') {
+        entry.cost = Number(target.value) || 0;
+      } else if (field === 'income') {
+        entry.income = Number(target.value) || 0;
+      }
+    }
+  } else if (section === 'oligarchs') {
+    const entryId = target.dataset.secretEntry;
+    const field = target.dataset.secretField;
+    const sheet3 = ensureSecretSheet(3);
+    const entry = (sheet3?.oligarchs || []).find(item => item.id === entryId);
+    if (entry) {
+      if (field === 'name') {
+        entry.name = target.value;
+      } else if (field === 'cost') {
+        entry.cost = Number(target.value) || 0;
+      } else if (field === 'income') {
+        entry.income = Number(target.value) || 0;
+      }
+    }
+  } else if (section === 'notes') {
+    sheet.notes = target.value;
+  } else if (section === 'info') {
+    const field = target.dataset.secretField;
+    if (field === 'player') {
+      gameData.secretData.playerInfo.player = target.value;
+    } else if (field === 'dream') {
+      gameData.secretData.playerInfo.dream = target.value;
+    }
+  }
+
+  updateSecretSheetTotals(round);
+  if (section === 'oligarchs') {
+    updateSecretSheetTotals(3);
+  }
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+}
+
+function addSecretBusiness(round) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet || !Array.isArray(sheet.businesses)) {
+    return;
+  }
+
+  sheet.businesses.push(createEmptySecretBusiness());
+  renderSecretBusinessTable(round, sheet);
+}
+
+function removeSecretBusiness(round, entryId) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet || !Array.isArray(sheet.businesses)) {
+    return;
+  }
+
+  sheet.businesses = sheet.businesses.filter(entry => entry.id !== entryId);
+  if (sheet.businesses.length === 0) {
+    sheet.businesses.push(createEmptySecretBusiness());
+  }
+
+  renderSecretBusinessTable(round, sheet);
+  updateSecretSheetTotals(round);
+  updateSecretSummary();
+  saveGameData();
+}
+
+function addSecretOligarchAsset() {
+  const sheet = ensureSecretSheet(3);
+  if (!sheet || !Array.isArray(sheet.oligarchs)) {
+    return;
+  }
+
+  sheet.oligarchs.push(createEmptySecretOligarchEntry());
+  renderSecretOligarchTable(sheet);
+}
+
+function removeSecretOligarchAsset(entryId) {
+  const sheet = ensureSecretSheet(3);
+  if (!sheet || !Array.isArray(sheet.oligarchs)) {
+    return;
+  }
+
+  sheet.oligarchs = sheet.oligarchs.filter(entry => entry.id !== entryId);
+  if (sheet.oligarchs.length === 0) {
+    sheet.oligarchs.push(createEmptySecretOligarchEntry());
+  }
+
+  renderSecretOligarchTable(sheet);
+  updateSecretSheetTotals(3);
+  updateSecretSummary();
+  saveGameData();
+}
+
+function secretApplyWalletChange(type) {
+  const input = document.getElementById('secretWalletAdjustment');
+  if (!input) return;
+
+  const amount = Number(input.value);
   if (!amount || amount <= 0) {
     showModal('Ошибка', 'Введите корректную сумму');
     return;
   }
-  
-  gameData.wallet += amount;
-  updateSecretDisplay();
-  
-  document.getElementById('secretCustomAmount').value = '';
-  showModal('Доход добавлен', `+₽${amount.toLocaleString()}`);
+
+  if (type === 'add') {
+    gameData.wallet += amount;
+    showModal('Пополнение кошелька', `Вы добавили ₽${formatRub(amount)}`);
+  } else {
+    gameData.wallet -= amount;
+    showModal('Списание средств', `Вы списали ₽${formatRub(amount)}`);
+  }
+
+  input.value = '';
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
 }
 
-function addSecretCustomExpense() {
-  const amount = parseFloat(document.getElementById('secretCustomAmount').value);
-  
-  if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму');
-    return;
+function getSecretRoundUnlockMessage(round) {
+  if (round === 2) {
+    return 'Вы накопили ₽200 000, переходите в круг предпринимателей. Зарплата обнуляется, а содержание склада теперь обходится в ₽100 000.';
   }
-  
-  if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств');
-    return;
+  if (round === 3) {
+    return 'Пассивный доход достиг ₽300 000. Добро пожаловать в круг олигархов! Планируйте крупные активы и шаги к мечте.';
   }
-  
-  gameData.wallet -= amount;
-  updateSecretDisplay();
-  
-  document.getElementById('secretCustomAmount').value = '';
-  showModal('Расход добавлен', `-₽${amount.toLocaleString()}`);
+  return '';
 }
 
-function checkSecretRoundTransition() {
-  if (gameData.secretData.round === 1 && gameData.wallet >= 200000) {
-    showModal('Переход на 2-й круг!', 'Поздравляем! Вы накопили ₽200,000');
-    gameData.secretData.round = 2;
-    
-    // Переключить на второй круг
-    document.getElementById('secretRound1').style.display = 'none';
-    document.getElementById('secretRound2').style.display = 'block';
-    document.getElementById('roundIndicator').textContent = 'Круг 2';
-  } else if (gameData.secretData.round === 2 && gameData.secretData.passiveIncome >= 300000) {
-    showModal('Переход на 3-й круг!', 'Поздравляем! Пассивный доход ₽300,000');
-    gameData.secretData.round = 3;
-    
-    // Переключить на третий круг
-    document.getElementById('secretRound2').style.display = 'none';
-    document.getElementById('secretRound3').style.display = 'block';
-    document.getElementById('roundIndicator').textContent = 'Финальный круг';
+function unlockSecretRound(round) {
+  const secret = ensureSecretState(gameData.secretData);
+  if (secret.unlockedRounds.includes(round)) {
+    return;
   }
+
+  secret.unlockedRounds.push(round);
+  secret.unlockedRounds.sort((a, b) => a - b);
+  gameData.secretData = secret;
+
+  ensureSecretSheet(round);
+  if (round === 2) {
+    const sheet2 = ensureSecretSheet(2);
+    if (sheet2?.passives?.warehouseExpense) {
+      sheet2.passives.warehouseExpense.payment = 100000;
+      sheet2.passives.warehouseExpense.amount = 100000;
+    }
+    gameData.wallet -= 100000;
+    gameData.secretData.warehouseFeeDeducted = true;
+    const sheet3 = gameData.secretData.unlockedRounds.includes(3) ? ensureSecretSheet(3) : null;
+    if (sheet3?.passives?.warehouseExpense && !sheet3.passives.warehouseExpense.payment) {
+      sheet3.passives.warehouseExpense.payment = 100000;
+    }
+  }
+
+  if (round === 3) {
+    ensureSecretSheet(3);
+  }
+
+  showModal('Новый круг открыт', getSecretRoundUnlockMessage(round));
+  renderSecretSheets();
+  renderSecretRoundTabs();
+  setSecretRound(round, { silent: true });
+  updateSecretSummary();
+  saveGameData();
 }
 
-function sellProducts() {
-  const salePercent = parseFloat(document.getElementById('salePercent').value);
-  const salePrice = parseFloat(document.getElementById('salePrice').value);
-  const productPrice = parseFloat(document.getElementById('productPrice').value);
-  
-  if (!salePercent || !salePrice || salePercent <= 0 || salePercent > 100) {
-    showModal('Ошибка', 'Введите корректный процент (1-100)');
-    return;
+function checkSecretUnlocks() {
+  const secret = ensureSecretState(gameData.secretData);
+  if (!secret.unlockedRounds.includes(2) && gameData.wallet >= (SECRET_ROUND_CONFIG[1].requirement?.target || 0)) {
+    unlockSecretRound(2);
   }
-  
-  if (salePercent / 100 > gameData.secretData.inventory / 100) {
-    showModal('Ошибка', 'Недостаточно товара на складе');
-    return;
-  }
-  
-  // Рассчитать выручку
-  const revenue = (salePercent / 100) * salePrice;
-  const cost = (salePercent / 100) * productPrice;
-  const profit = revenue - cost;
-  
-  // Обновить остаток товара
-  gameData.secretData.inventory -= salePercent;
-  gameData.wallet += revenue;
-  
-  // Обновить интерфейс
-  document.getElementById('inventoryAmount').textContent = `${gameData.secretData.inventory}%`;
-  updateSecretDisplay();
-  
-  // Очистить поля
-  document.getElementById('salePercent').value = '';
-  document.getElementById('salePrice').value = '';
-  
-  showModal('Товар продан', `Выручка: ₽${revenue.toLocaleString()}, Прибыль: ₽${profit.toLocaleString()}`);
-}
 
-function payWarehouseExpenses() {
-  const warehouseCost = 100000;
-  
-  if (gameData.wallet < warehouseCost) {
-    showModal('Ошибка', 'Недостаточно средств для оплаты склада');
-    return;
+  const passiveTarget = SECRET_ROUND_CONFIG[2].requirement?.target || 0;
+  const round2Totals = calculateSecretRoundTotals(2);
+  if (!secret.unlockedRounds.includes(3) && round2Totals.passiveIncome >= passiveTarget) {
+    unlockSecretRound(3);
   }
-  
-  gameData.wallet -= warehouseCost;
-  updateSecretDisplay();
-  showModal('Склад оплачен', `-₽${warehouseCost.toLocaleString()}`);
-}
-
-function addNetworkIncome() {
-  const amount = parseFloat(document.getElementById('networkIncome').value);
-  
-  if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму');
-    return;
-  }
-  
-  gameData.wallet += amount;
-  gameData.secretData.networkIncome += amount;
-  
-  updateSecretDisplay();
-  document.getElementById('networkIncome').value = '';
-  
-  showModal('Доход от сети добавлен', `+₽${amount.toLocaleString()} (активный доход)`);
-}
-
-function calculateShares() {
-  const stock1 = parseFloat(document.getElementById('stock1').value) || 0;
-  const stock2 = parseFloat(document.getElementById('stock2').value) || 0;
-  const stock3 = parseFloat(document.getElementById('stock3').value) || 0;
-  const stock4 = parseFloat(document.getElementById('stock4').value) || 0;
-  
-  if (stock1 === 0 || stock2 === 0 || stock3 === 0 || stock4 === 0) {
-    showModal('Ошибка', 'Введите все 4 цены акций');
-    return;
-  }
-  
-  const average = (stock1 + stock2 + stock3 + stock4) / 4;
-  document.getElementById('shareResult').innerHTML = `
-    <strong>Средняя цена пая: ₽${average.toFixed(2)}</strong>
-  `;
-  
-  showModal('Пай рассчитан', `Средняя цена: ₽${average.toFixed(2)}`);
 }
 
 // === МОДАЛЬНЫЕ ОКНА ===
@@ -2928,6 +3674,8 @@ function loadGameData() {
       const stageState = ensureStageTwoState();
       stageTwoReportUnlocked = !!stageState.reportUnlocked;
       stageTwoVictoryCelebrated = !!stageState.victoryCelebrated;
+      gameData.secretData = ensureSecretState(gameData.secretData);
+      ensureSecretBaseSheets();
     }
 
     // Не восстанавливаем currentScreen, чтобы всегда начинать с приветствия
