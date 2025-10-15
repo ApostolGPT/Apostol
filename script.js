@@ -298,6 +298,71 @@ const secretOfMoneyProfessions = [
   {name: "Директор", icon: "👔", salary: 80000, expenses: 60000, profit: 20000, savings: 5000}
 ];
 
+const SECRET_ASSET_CATEGORIES = [
+  { category: 'salary', label: 'Заработная плата', duplicates: 1, allowQuantity: false, allowName: false, includeOnRounds: [1] },
+  { category: 'land', label: 'Земельные участки', duplicates: 1 },
+  { category: 'construction', label: 'Строительство', duplicates: 1 },
+  { category: 'realEstate', label: 'Недвижимость', duplicates: 2 },
+  { category: 'securities', label: 'Ценные бумаги', duplicates: 2 },
+  { category: 'funds', label: 'Паевые фонды', duplicates: 2 },
+  { category: 'business', label: 'Участие в бизнесе', duplicates: 2 },
+  { category: 'deposits', label: 'Банковские вклады', duplicates: 1 },
+  { category: 'privateLoans', label: 'Частные займы', duplicates: 1 },
+  { category: 'gold', label: 'Золотые изделия', duplicates: 1 },
+  { category: 'other', label: 'Другие активы', duplicates: 1 }
+];
+
+const SECRET_ADDITIONAL_ASSET_OPTIONS = SECRET_ASSET_CATEGORIES
+  .filter(item => item.category !== 'salary')
+  .map(item => ({
+    value: item.category,
+    label: item.label
+  }));
+
+const SECRET_BASE_PASSIVES = [
+  { key: 'living', label: 'Проживание и питание', type: 'fixed' },
+  { key: 'child1', label: 'Процветание детей 1', type: 'child' },
+  { key: 'child2', label: 'Процветание детей 2', type: 'child' },
+  { key: 'child3', label: 'Процветание детей 3', type: 'child' },
+  { key: 'broker', label: 'Услуги брокера', type: 'service' },
+  { key: 'realtor', label: 'Услуги риелтора', type: 'service' },
+  { key: 'insurance', label: 'Страховые взносы', type: 'service' },
+  { key: 'other1', label: 'Другой пассив', type: 'other' },
+  { key: 'other2', label: 'Другой пассив', type: 'other' }
+];
+
+function buildSecretAssetRows(round) {
+  const rows = [];
+  SECRET_ASSET_CATEGORIES.forEach(category => {
+    if (Array.isArray(category.includeOnRounds) && !category.includeOnRounds.includes(round)) {
+      return;
+    }
+
+    const count = category.duplicates || 1;
+    for (let index = 0; index < count; index += 1) {
+      const keySuffix = count > 1 ? `_${index + 1}` : '';
+      rows.push({
+        key: `${category.category}${keySuffix}`,
+        label: category.label,
+        category: category.category,
+        allowQuantity: category.allowQuantity !== false,
+        allowName: category.allowName !== false
+      });
+    }
+  });
+  return rows;
+}
+
+function buildSecretPassiveRows(round) {
+  const rows = SECRET_BASE_PASSIVES.map(item => ({ ...item }));
+
+  if (round >= 2) {
+    rows.splice(1, 0, { key: 'warehouse', label: 'Содержание склада', type: 'warehouse', defaultAmount: 100000 });
+  }
+
+  return rows;
+}
+
 const SECRET_ROUND_CONFIG = {
   1: {
     label: 'Круг наёмных работников',
@@ -306,29 +371,8 @@ const SECRET_ROUND_CONFIG = {
       target: 200000,
       description: 'Накопите ₽200 000, чтобы открыть круг предпринимателей'
     },
-    sheetType: 'sd1',
-    assets: [
-      { key: 'salary', label: 'Заработная плата', hasQuantity: true, defaultQuantity: 1 },
-      { key: 'additionalIncome', label: 'Доп. доходы', hasQuantity: true },
-      { key: 'sideJob', label: 'Подработка', hasQuantity: true },
-      { key: 'networkBusiness', label: 'Сетевой бизнес', hasQuantity: true },
-      { key: 'readyStock', label: 'Склад готовой продукции', hasQuantity: true },
-      { key: 'construction', label: 'Строительство', hasQuantity: true },
-      { key: 'trade', label: 'Торговля', hasQuantity: true },
-      { key: 'services', label: 'Услуги', hasQuantity: true }
-    ],
-    passives: [
-      { key: 'consumerLoan1', label: 'Потреб. кредит 1' },
-      { key: 'consumerLoan2', label: 'Потреб. кредит 2' },
-      { key: 'constructionExpense', label: 'Строительство' },
-      { key: 'tradeExpense', label: 'Торговля' },
-      { key: 'servicesExpense', label: 'Услуги' },
-      { key: 'childExpense1', label: 'Покупка детей 1' },
-      { key: 'childExpense2', label: 'Покупка детей 2' },
-      { key: 'childExpense3', label: 'Покупка детей 3' },
-      { key: 'childExpense4', label: 'Покупка детей 4' },
-      { key: 'charity', label: 'Пожертвования' }
-    ]
+    getAssetRows: () => buildSecretAssetRows(1),
+    getPassiveRows: () => buildSecretPassiveRows(1)
   },
   2: {
     label: 'Круг предпринимателей',
@@ -337,49 +381,13 @@ const SECRET_ROUND_CONFIG = {
       target: 300000,
       description: 'Сформируйте пассивный доход минимум ₽300 000, чтобы выйти в круг олигархов'
     },
-    sheetType: 'sd2',
-    assets: [
-      { key: 'salary', label: 'Зарплата', lockIncome: true, lockPrice: true },
-      { key: 'businessIncome', label: 'Доходы от бизнеса', countsTowardPassive: true },
-      { key: 'investments', label: 'Инвестиции', countsTowardPassive: true },
-      { key: 'dividends', label: 'Дивиденды', countsTowardPassive: true },
-      { key: 'realEstate', label: 'Недвижимость', countsTowardPassive: true },
-      { key: 'warehouse1', label: 'Склад 1', countsTowardPassive: true },
-      { key: 'warehouse2', label: 'Склад 2', countsTowardPassive: true },
-      { key: 'warehouse3', label: 'Склад 3', countsTowardPassive: true },
-      { key: 'savings', label: 'Накопления' }
-    ],
-    passives: [
-      { key: 'warehouseExpense', label: 'Содержание склада', defaultPayment: 100000, lockPayment: true },
-      { key: 'logistics', label: 'Логистика и операционные расходы' },
-      { key: 'debtRepayment', label: 'Погашение кредитов' },
-      { key: 'charity', label: 'Пожертвования' }
-    ],
-    businessList: true
+    getAssetRows: () => buildSecretAssetRows(2),
+    getPassiveRows: () => buildSecretPassiveRows(2)
   },
   3: {
     label: 'Круг олигархов',
-    sheetType: 'sd2',
-    inheritFrom: 2,
-    assets: [
-      { key: 'salary', label: 'Зарплата', lockIncome: true, lockPrice: true },
-      { key: 'businessIncome', label: 'Доходы от бизнеса', countsTowardPassive: true },
-      { key: 'investments', label: 'Инвестиции', countsTowardPassive: true },
-      { key: 'dividends', label: 'Дивиденды', countsTowardPassive: true },
-      { key: 'realEstate', label: 'Недвижимость', countsTowardPassive: true },
-      { key: 'warehouse1', label: 'Склад 1', countsTowardPassive: true },
-      { key: 'warehouse2', label: 'Склад 2', countsTowardPassive: true },
-      { key: 'warehouse3', label: 'Склад 3', countsTowardPassive: true },
-      { key: 'savings', label: 'Накопления' }
-    ],
-    passives: [
-      { key: 'warehouseExpense', label: 'Содержание склада', defaultPayment: 100000, lockPayment: true },
-      { key: 'logistics', label: 'Логистика и операционные расходы' },
-      { key: 'debtRepayment', label: 'Погашение кредитов' },
-      { key: 'charity', label: 'Пожертвования' }
-    ],
-    businessList: true,
-    oligarchList: true
+    getAssetRows: () => buildSecretAssetRows(3),
+    getPassiveRows: () => buildSecretPassiveRows(3)
   }
 };
 
@@ -557,6 +565,27 @@ function deepCloneSecretSheet(baseSheet) {
   const clone = {
     assets: {},
     passives: {},
+    extraAssets: Array.isArray(baseSheet?.extraAssets) ? baseSheet.extraAssets.map(entry => ({ ...entry })) : [],
+    additionalPassives: Array.isArray(baseSheet?.additionalPassives)
+      ? baseSheet.additionalPassives.map(entry => ({ ...entry }))
+      : [],
+    marketing: {
+      packages: { ...(baseSheet?.marketing?.packages || { income: 0, count: 0 }) },
+      vitamins: { ...(baseSheet?.marketing?.vitamins || { income: 0, count: 0 }) }
+    },
+    totals: {
+      income: Number(baseSheet?.totals?.income) || 0,
+      passive: Number(baseSheet?.totals?.passive) || 0,
+      regular: Number(baseSheet?.totals?.regular) || 0,
+      baseRegular: Number(baseSheet?.totals?.baseRegular) || 0
+    },
+    ledger: Array.isArray(baseSheet?.ledger) ? baseSheet.ledger.map(entry => ({ ...entry })) : [],
+    credit: {
+      amount: Number(baseSheet?.credit?.amount) || 0,
+      payment: Number(baseSheet?.credit?.payment) || 0,
+      paid: Number(baseSheet?.credit?.paid) || 0
+    },
+    childrenCount: Number(baseSheet?.childrenCount) || 3,
     notes: baseSheet?.notes || ''
   };
 
@@ -572,14 +601,6 @@ function deepCloneSecretSheet(baseSheet) {
         clone.passives[key] = { ...value };
       });
     }
-
-    if (Array.isArray(baseSheet.businesses)) {
-      clone.businesses = baseSheet.businesses.map(entry => ({ ...entry }));
-    }
-
-    if (Array.isArray(baseSheet.oligarchs)) {
-      clone.oligarchs = baseSheet.oligarchs.map(entry => ({ ...entry }));
-    }
   }
 
   return clone;
@@ -589,6 +610,21 @@ function createSecretSheetFromConfig(config) {
   const sheet = {
     assets: {},
     passives: {},
+    extraAssets: [],
+    additionalPassives: [],
+    marketing: {
+      packages: { income: 0, count: 0 },
+      vitamins: { income: 0, count: 0 }
+    },
+    totals: {
+      income: 0,
+      passive: 0,
+      regular: 0,
+      baseRegular: 0
+    },
+    ledger: [],
+    credit: { amount: 0, payment: 0, paid: 0 },
+    childrenCount: 3,
     notes: ''
   };
 
@@ -605,63 +641,82 @@ function applySecretConfigDefaults(sheet, config) {
     sheet.passives = {};
   }
 
-  config.assets.forEach(item => {
+  const assetRows = typeof config.getAssetRows === 'function' ? config.getAssetRows() : [];
+  assetRows.forEach(item => {
     if (!sheet.assets[item.key]) {
       sheet.assets[item.key] = {
-        price: Number(item.defaultPrice) || 0,
-        quantity: item.hasQuantity ? Number(item.defaultQuantity ?? 0) : 1,
-        income: Number(item.defaultIncome) || 0
+        name: '',
+        price: 0,
+        quantity: item.allowQuantity ? 0 : 1,
+        income: 0
       };
     } else {
       const existing = sheet.assets[item.key];
+      existing.name = typeof existing.name === 'string' ? existing.name : '';
       existing.price = Number(existing.price) || 0;
-      existing.quantity = item.hasQuantity ? Number(existing.quantity ?? 0) : 1;
+      existing.quantity = item.allowQuantity ? Number(existing.quantity ?? 0) : 1;
       existing.income = Number(existing.income) || 0;
     }
   });
 
-  config.passives.forEach(item => {
+  const passiveRows = typeof config.getPassiveRows === 'function' ? config.getPassiveRows() : [];
+  passiveRows.forEach(item => {
     if (!sheet.passives[item.key]) {
       sheet.passives[item.key] = {
-        amount: Number(item.defaultAmount) || 0,
-        payment: Number(item.defaultPayment) || 0
+        amount: Number(item.defaultAmount) || 0
       };
     } else {
       const existing = sheet.passives[item.key];
       existing.amount = Number(existing.amount) || 0;
-      if (existing.payment == null) {
-        existing.payment = Number(item.defaultPayment) || 0;
-      } else {
-        existing.payment = Number(existing.payment) || 0;
-      }
     }
   });
 
-  if (config.businessList) {
-    if (!Array.isArray(sheet.businesses)) {
-      sheet.businesses = [];
-    }
-    if (sheet.businesses.length === 0) {
-      sheet.businesses.push(createEmptySecretBusiness());
-    }
+  if (!Array.isArray(sheet.extraAssets)) {
+    sheet.extraAssets = [];
   }
 
-  if (!config.businessList) {
-    delete sheet.businesses;
+  if (!Array.isArray(sheet.additionalPassives)) {
+    sheet.additionalPassives = [];
   }
 
-  if (config.oligarchList) {
-    if (!Array.isArray(sheet.oligarchs)) {
-      sheet.oligarchs = [];
-    }
-    if (sheet.oligarchs.length === 0) {
-      sheet.oligarchs.push(createEmptySecretOligarchEntry());
-    }
+  if (!sheet.marketing || typeof sheet.marketing !== 'object') {
+    sheet.marketing = {
+      packages: { income: 0, count: 0 },
+      vitamins: { income: 0, count: 0 }
+    };
+  } else {
+    sheet.marketing.packages = {
+      income: Number(sheet.marketing.packages?.income) || 0,
+      count: Number(sheet.marketing.packages?.count) || 0
+    };
+    sheet.marketing.vitamins = {
+      income: Number(sheet.marketing.vitamins?.income) || 0,
+      count: Number(sheet.marketing.vitamins?.count) || 0
+    };
   }
 
-  if (!config.oligarchList) {
-    delete sheet.oligarchs;
+  if (!sheet.totals || typeof sheet.totals !== 'object') {
+    sheet.totals = { income: 0, passive: 0, regular: 0, baseRegular: 0 };
+  } else {
+    sheet.totals.income = Number(sheet.totals.income) || 0;
+    sheet.totals.passive = Number(sheet.totals.passive) || 0;
+    sheet.totals.regular = Number(sheet.totals.regular) || 0;
+    sheet.totals.baseRegular = Number(sheet.totals.baseRegular) || 0;
   }
+
+  if (!Array.isArray(sheet.ledger)) {
+    sheet.ledger = [];
+  }
+
+  if (!sheet.credit || typeof sheet.credit !== 'object') {
+    sheet.credit = { amount: 0, payment: 0, paid: 0 };
+  } else {
+    sheet.credit.amount = Number(sheet.credit.amount) || 0;
+    sheet.credit.payment = Number(sheet.credit.payment) || 0;
+    sheet.credit.paid = Number(sheet.credit.paid) || 0;
+  }
+
+  sheet.childrenCount = Number(sheet.childrenCount) || 3;
 
   return sheet;
 }
@@ -676,12 +731,7 @@ function ensureSecretSheet(round) {
   const secretState = gameData.secretData;
 
   if (!secretState.sheets[round]) {
-    if (config.inheritFrom) {
-      const base = ensureSecretSheet(config.inheritFrom) || createSecretSheetFromConfig(SECRET_ROUND_CONFIG[config.inheritFrom]);
-      secretState.sheets[round] = deepCloneSecretSheet(base);
-    } else {
-      secretState.sheets[round] = createSecretSheetFromConfig(config);
-    }
+    secretState.sheets[round] = createSecretSheetFromConfig(config);
   }
 
   const sheet = secretState.sheets[round];
@@ -692,27 +742,7 @@ function ensureSecretSheet(round) {
 function ensureSecretBaseSheets() {
   ensureSecretSheet(1);
   ensureSecretSheet(2);
-  if (gameData.secretData.unlockedRounds?.includes(3)) {
-    ensureSecretSheet(3);
-  }
-}
-
-function createEmptySecretBusiness() {
-  return {
-    id: generateSecretEntryId('business'),
-    name: '',
-    cost: 0,
-    income: 0
-  };
-}
-
-function createEmptySecretOligarchEntry() {
-  return {
-    id: generateSecretEntryId('oligarch'),
-    name: '',
-    cost: 0,
-    income: 0
-  };
+  ensureSecretSheet(3);
 }
 
 function ensureStageTwoState() {
@@ -2953,6 +2983,8 @@ function applySecretProfessionDefaults() {
   }
 
   const salary = Number(selectedProfession.salary) || 0;
+  const livingCost = Number(selectedProfession.expenses) || 0;
+  const baseProfit = Number(selectedProfession.profit) || 0;
   const sheet1 = ensureSecretSheet(1);
   if (sheet1 && sheet1.assets?.salary) {
     sheet1.assets.salary.income = salary;
@@ -2960,36 +2992,49 @@ function applySecretProfessionDefaults() {
     sheet1.assets.salary.quantity = sheet1.assets.salary.quantity ?? 1;
   }
 
+  if (sheet1?.passives?.living) {
+    sheet1.passives.living.amount = livingCost;
+  }
+
+  sheet1.totals = sheet1.totals || { income: 0, passive: 0, regular: 0, baseRegular: 0 };
+  sheet1.totals.baseRegular = baseProfit;
+  sheet1.totals.regular = baseProfit + (Number(sheet1.totals.passive) || 0);
+
   const sheet2 = ensureSecretSheet(2);
   if (sheet2 && sheet2.assets?.salary) {
     sheet2.assets.salary.income = 0;
     sheet2.assets.salary.price = 0;
   }
 
-  if (gameData.secretData.unlockedRounds?.includes(3)) {
-    const sheet3 = ensureSecretSheet(3);
-    if (sheet3 && sheet3.assets?.salary) {
-      sheet3.assets.salary.income = 0;
-      sheet3.assets.salary.price = 0;
-    }
+  if (sheet2?.passives?.living) {
+    sheet2.passives.living.amount = livingCost;
   }
+
+  sheet2.totals = sheet2.totals || { income: 0, passive: 0, regular: 0, baseRegular: 0 };
+  sheet2.totals.baseRegular = 0;
+  sheet2.totals.regular = (Number(sheet2.totals.passive) || 0);
+
+  const sheet3 = ensureSecretSheet(3);
+  if (sheet3 && sheet3.assets?.salary) {
+    sheet3.assets.salary.income = 0;
+    sheet3.assets.salary.price = 0;
+  }
+
+  if (sheet3?.passives?.living) {
+    sheet3.passives.living.amount = livingCost;
+  }
+
+  sheet3.totals = sheet3.totals || { income: 0, passive: 0, regular: 0, baseRegular: 0 };
+  sheet3.totals.baseRegular = 0;
+  sheet3.totals.regular = (Number(sheet3.totals.passive) || 0);
 }
 
 function renderSecretSheets() {
-  const rounds = [1, 2];
-  if (gameData.secretData.unlockedRounds?.includes(3)) {
-    rounds.push(3);
-  }
-
-  rounds.forEach(round => {
+  [1, 2, 3].forEach(round => {
     ensureSecretSheet(round);
     renderSecretSheet(round);
     updateSecretSheetTotals(round);
   });
-
-  if (!gameData.secretData.unlockedRounds?.includes(3)) {
-    clearSecretSheetDom(3);
-  }
 }
 
 function clearSecretSheetDom(round) {
@@ -2997,20 +3042,22 @@ function clearSecretSheetDom(round) {
   const passivesBody = document.getElementById(`secretRound${round}Passives`);
   if (assetsBody) assetsBody.innerHTML = '';
   if (passivesBody) passivesBody.innerHTML = '';
-
-  const businessBody = document.getElementById(`secretRound${round}Businesses`);
-  if (businessBody) businessBody.innerHTML = '';
-
-  const oligarchBody = document.getElementById('secretRound3Oligarchs');
-  if (round === 3 && oligarchBody) oligarchBody.innerHTML = '';
-
-  const notes = document.getElementById(`secretRound${round}Notes`);
-  if (notes) notes.value = '';
-
-  const incomeSpan = document.getElementById(`secretRound${round}IncomeTotal`);
-  const expenseSpan = document.getElementById(`secretRound${round}ExpenseTotal`);
-  if (incomeSpan) incomeSpan.textContent = '0';
-  if (expenseSpan) expenseSpan.textContent = '0';
+  const select = document.getElementById(`secretRound${round}AssetSelect`);
+  if (select) select.innerHTML = '';
+  const packagesTotal = document.getElementById(`secretRound${round}PackagesTotal`);
+  if (packagesTotal) packagesTotal.textContent = '₽0';
+  const vitaminsTotal = document.getElementById(`secretRound${round}VitaminsTotal`);
+  if (vitaminsTotal) vitaminsTotal.textContent = '₽0';
+  const ledgerLog = document.getElementById(`secretRound${round}LedgerLog`);
+  if (ledgerLog) ledgerLog.innerHTML = '';
+  const ledgerAmount = document.getElementById(`secretRound${round}LedgerAmount`);
+  if (ledgerAmount) ledgerAmount.value = '';
+  const ledgerNote = document.getElementById(`secretRound${round}LedgerNote`);
+  if (ledgerNote) ledgerNote.value = '';
+  const totalsRow = document.querySelectorAll(`.secret-totals-row [data-secret-round="${round}"]`);
+  totalsRow.forEach(input => { input.value = ''; });
+  const creditFields = document.querySelectorAll(`[data-secret-round="${round}"][data-secret-section="credit"]`);
+  creditFields.forEach(field => { field.value = ''; });
 }
 
 function renderSecretSheet(round) {
@@ -3022,21 +3069,11 @@ function renderSecretSheet(round) {
 
   renderSecretAssetsTable(round, sheet, config);
   renderSecretPassivesTable(round, sheet, config);
-
-  if (config.businessList) {
-    renderSecretBusinessTable(round, sheet);
-  }
-
-  if (config.oligarchList) {
-    renderSecretOligarchTable(sheet);
-  }
-
-  const notesField = document.getElementById(`secretRound${round}Notes`);
-  if (notesField && sheet.notes !== undefined) {
-    if (document.activeElement !== notesField) {
-      notesField.value = sheet.notes;
-    }
-  }
+  renderSecretNetwork(round, sheet);
+  renderSecretTotals(round, sheet);
+  renderSecretCredit(round, sheet);
+  renderSecretLedger(round, sheet);
+  populateSecretAssetSelect(round);
 }
 
 function renderSecretAssetsTable(round, sheet, config) {
@@ -3044,25 +3081,92 @@ function renderSecretAssetsTable(round, sheet, config) {
   if (!body) return;
 
   body.innerHTML = '';
-  config.assets.forEach(item => {
-    const values = sheet.assets[item.key] || { price: 0, quantity: item.hasQuantity ? 0 : 1, income: 0 };
+  const rows = typeof config.getAssetRows === 'function' ? config.getAssetRows() : [];
+
+  rows.forEach(item => {
+    const values = sheet.assets[item.key] || { name: '', price: 0, quantity: item.allowQuantity ? 0 : 1, income: 0 };
     const row = document.createElement('tr');
+    row.className = 'secret-asset-row';
 
-    const priceField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="price" value="${values.price || 0}" ${item.lockPrice ? 'readonly' : ''}>`;
-    const incomeField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="income" value="${values.income || 0}" ${item.lockIncome ? 'readonly' : ''}>`;
+    const labelCell = document.createElement('th');
+    labelCell.textContent = item.label;
 
-    let quantityCell = '';
-    if (config.sheetType === 'sd1' && item.hasQuantity) {
-      quantityCell = `<td><input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="quantity" value="${values.quantity || 0}"></td>`;
+    const nameCell = document.createElement('td');
+    if (item.allowName) {
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = values.name || '';
+      nameInput.dataset.secretRound = round;
+      nameInput.dataset.secretSection = 'assets';
+      nameInput.dataset.secretKey = item.key;
+      nameInput.dataset.secretField = 'name';
+      nameCell.appendChild(nameInput);
+    } else {
+      nameCell.innerHTML = '<span class="placeholder">—</span>';
     }
 
-    row.innerHTML = `
-      <th>${item.label}</th>
-      <td>${priceField}</td>
-      ${quantityCell || (config.sheetType === 'sd1' ? '<td></td>' : '')}
-      <td>${incomeField}</td>
-    `;
+    const priceCell = document.createElement('td');
+    priceCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="price" value="${values.price || 0}">`;
 
+    const quantityCell = document.createElement('td');
+    if (item.allowQuantity) {
+      quantityCell.innerHTML = `<input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="quantity" value="${values.quantity || 0}">`;
+    } else {
+      quantityCell.innerHTML = '<span class="placeholder">—</span>';
+    }
+
+    const incomeCell = document.createElement('td');
+    incomeCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="income" value="${values.income || 0}">`;
+
+    row.appendChild(labelCell);
+    row.appendChild(nameCell);
+    row.appendChild(priceCell);
+    row.appendChild(quantityCell);
+    row.appendChild(incomeCell);
+    body.appendChild(row);
+  });
+
+  (sheet.extraAssets || []).forEach(entry => {
+    const row = document.createElement('tr');
+    row.className = 'secret-asset-row extra';
+
+    const labelCell = document.createElement('th');
+    labelCell.textContent = entry.label || 'Дополнительный актив';
+
+    const nameCell = document.createElement('td');
+    const nameWrapper = document.createElement('div');
+    nameWrapper.className = 'asset-name-wrapper';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = entry.name || '';
+    nameInput.dataset.secretRound = round;
+    nameInput.dataset.secretSection = 'extra-assets';
+    nameInput.dataset.secretEntry = entry.id;
+    nameInput.dataset.secretField = 'name';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'icon-btn';
+    removeBtn.innerHTML = '<span aria-hidden="true">×</span>';
+    removeBtn.title = 'Удалить колонку';
+    removeBtn.onclick = () => removeSecretAssetRow(round, entry.id);
+    nameWrapper.appendChild(nameInput);
+    nameWrapper.appendChild(removeBtn);
+    nameCell.appendChild(nameWrapper);
+
+    const priceCell = document.createElement('td');
+    priceCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="price" value="${entry.price || 0}">`;
+
+    const quantityCell = document.createElement('td');
+    quantityCell.innerHTML = `<input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="quantity" value="${entry.quantity || 0}">`;
+
+    const incomeCell = document.createElement('td');
+    incomeCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}">`;
+
+    row.appendChild(labelCell);
+    row.appendChild(nameCell);
+    row.appendChild(priceCell);
+    row.appendChild(quantityCell);
+    row.appendChild(incomeCell);
     body.appendChild(row);
   });
 }
@@ -3072,66 +3176,317 @@ function renderSecretPassivesTable(round, sheet, config) {
   if (!body) return;
 
   body.innerHTML = '';
-  config.passives.forEach(item => {
-    const values = sheet.passives[item.key] || { amount: 0, payment: 0 };
-    const amountField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="passives" data-secret-key="${item.key}" data-secret-field="amount" value="${values.amount || 0}" ${item.lockAmount ? 'readonly' : ''}>`;
-    const paymentField = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="passives" data-secret-key="${item.key}" data-secret-field="payment" value="${values.payment || 0}" ${item.lockPayment ? 'readonly' : ''}>`;
+  const rows = typeof config.getPassiveRows === 'function' ? config.getPassiveRows() : [];
 
+  rows.forEach(item => {
+    const values = sheet.passives[item.key] || { amount: 0 };
     const row = document.createElement('tr');
+    row.className = 'secret-passive-row';
     row.innerHTML = `
       <th>${item.label}</th>
-      <td>${amountField}</td>
-      <td>${paymentField}</td>
+      <td><input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="passives" data-secret-key="${item.key}" data-secret-field="amount" value="${values.amount || (item.defaultAmount || 0)}"></td>
     `;
+    body.appendChild(row);
+  });
 
+  (sheet.additionalPassives || []).forEach(entry => {
+    const row = document.createElement('tr');
+    row.className = 'secret-passive-row extra';
+
+    const labelCell = document.createElement('td');
+    labelCell.colSpan = 1;
+    labelCell.className = 'passive-label-cell';
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text';
+    labelInput.value = entry.label || 'Новый пассив';
+    labelInput.dataset.secretRound = round;
+    labelInput.dataset.secretSection = 'additional-passives';
+    labelInput.dataset.secretEntry = entry.id;
+    labelInput.dataset.secretField = 'label';
+    labelCell.appendChild(labelInput);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'icon-btn';
+    removeBtn.innerHTML = '<span aria-hidden="true">×</span>';
+    removeBtn.title = 'Удалить пассив';
+    removeBtn.onclick = () => removeSecretPassiveRow(round, entry.id);
+    labelCell.appendChild(removeBtn);
+
+    const amountCell = document.createElement('td');
+    amountCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="additional-passives" data-secret-entry="${entry.id}" data-secret-field="amount" value="${entry.amount || 0}">`;
+
+    row.appendChild(labelCell);
+    row.appendChild(amountCell);
     body.appendChild(row);
   });
 }
 
-function renderSecretBusinessTable(round, sheet) {
-  const body = document.getElementById(`secretRound${round}Businesses`);
-  if (!body) return;
+function renderSecretNetwork(round, sheet) {
+  const products = ['packages', 'vitamins'];
+  products.forEach(product => {
+    const incomeInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="marketing"][data-secret-entry="${product}"][data-secret-field="income"]`);
+    const countInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="marketing"][data-secret-entry="${product}"][data-secret-field="count"]`);
+    const totalSpan = document.getElementById(`secretRound${round}${product.charAt(0).toUpperCase() + product.slice(1)}Total`);
 
-  if (!Array.isArray(sheet.businesses) || sheet.businesses.length === 0) {
-    sheet.businesses = [createEmptySecretBusiness()];
-  }
+    const data = sheet.marketing?.[product] || { income: 0, count: 0 };
 
-  body.innerHTML = sheet.businesses.map(entry => `
-    <tr data-entry-id="${entry.id}">
-      <td><input type="text" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="name" value="${entry.name || ''}" placeholder="Название"></td>
-      <td><input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="cost" value="${entry.cost || 0}"></td>
-      <td><input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="businesses" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}"></td>
-      <td><button type="button" onclick="removeSecretBusiness(${round}, '${entry.id}')">Удалить</button></td>
-    </tr>
-  `).join('');
+    if (incomeInput && incomeInput !== document.activeElement) {
+      incomeInput.value = data.income || '';
+    }
+    if (countInput && countInput !== document.activeElement) {
+      countInput.value = data.count || '';
+    }
+    if (totalSpan) {
+      const total = (Number(data.income) || 0) * (Number(data.count) || 0);
+      totalSpan.textContent = `₽${formatRub(total)}`;
+    }
+  });
 }
 
-function renderSecretOligarchTable(sheet) {
-  const body = document.getElementById('secretRound3Oligarchs');
-  if (!body) return;
+function renderSecretTotals(round, sheet) {
+  const incomeInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="totals"][data-secret-field="income"]`);
+  const passiveInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="totals"][data-secret-field="passive"]`);
+  const regularInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="totals"][data-secret-field="regular"]`);
 
-  if (!Array.isArray(sheet.oligarchs) || sheet.oligarchs.length === 0) {
-    sheet.oligarchs = [createEmptySecretOligarchEntry()];
+  if (incomeInput && incomeInput !== document.activeElement) {
+    incomeInput.value = sheet.totals?.income || '';
+  }
+  if (passiveInput && passiveInput !== document.activeElement) {
+    passiveInput.value = sheet.totals?.passive || '';
+  }
+  if (regularInput) {
+    regularInput.value = sheet.totals?.regular || 0;
+  }
+}
+
+function renderSecretCredit(round, sheet) {
+  const amountInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="credit"][data-secret-field="amount"]`);
+  const paymentInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="credit"][data-secret-field="payment"]`);
+  const paidInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="credit"][data-secret-field="paid"]`);
+
+  if (amountInput && amountInput !== document.activeElement) {
+    amountInput.value = sheet.credit?.amount || '';
+  }
+  if (paymentInput) {
+    paymentInput.value = sheet.credit?.payment || 0;
+  }
+  if (paidInput && paidInput !== document.activeElement) {
+    paidInput.value = sheet.credit?.paid || '';
+  }
+}
+
+function renderSecretLedger(round, sheet) {
+  const list = document.getElementById(`secretRound${round}LedgerLog`);
+  if (!list) return;
+
+  list.innerHTML = '';
+  (sheet.ledger || []).forEach(entry => {
+    const item = document.createElement('li');
+    item.className = `ledger-item ${entry.type || 'income'}`;
+    const typeLabel = entry.type === 'expense' ? 'Расход' : entry.type === 'salary' ? 'Зарплата' : 'Доход';
+    const amount = `₽${formatRub(entry.amount || 0)}`;
+    const note = entry.note ? ` — ${entry.note}` : '';
+    const time = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ru-RU') : '';
+    item.textContent = time ? `${time}: ${typeLabel} +${amount}${note}` : `${typeLabel} +${amount}${note}`;
+    if (entry.type === 'expense') {
+      item.textContent = time ? `${time}: ${typeLabel} -${amount}${note}` : `${typeLabel} -${amount}${note}`;
+    }
+    list.appendChild(item);
+  });
+}
+
+function populateSecretAssetSelect(round) {
+  const select = document.getElementById(`secretRound${round}AssetSelect`);
+  if (!select) return;
+
+  const previous = select.value;
+  select.innerHTML = '';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Выберите актив';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  SECRET_ADDITIONAL_ASSET_OPTIONS.forEach(option => {
+    const opt = document.createElement('option');
+    opt.value = option.value;
+    opt.textContent = option.label;
+    if (option.value === previous) {
+      opt.selected = true;
+    }
+    select.appendChild(opt);
+  });
+}
+
+function secretAddAssetRow(round) {
+  const select = document.getElementById(`secretRound${round}AssetSelect`);
+  if (!select) return;
+  const category = select.value;
+  if (!category) {
+    showModal('Новый актив', 'Выберите категорию актива перед добавлением.');
+    return;
   }
 
-  body.innerHTML = sheet.oligarchs.map(entry => `
-    <tr data-entry-id="${entry.id}">
-      <td><input type="text" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="name" value="${entry.name || ''}" placeholder="Актив или мечта"></td>
-      <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="cost" value="${entry.cost || 0}"></td>
-      <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="oligarchs" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}"></td>
-      <td><button type="button" onclick="removeSecretOligarchAsset('${entry.id}')">Удалить</button></td>
-    </tr>
-  `).join('');
+  const option = SECRET_ADDITIONAL_ASSET_OPTIONS.find(item => item.value === category);
+  const sheet = ensureSecretSheet(round);
+  sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
+  sheet.extraAssets.push({
+    id: generateSecretEntryId('asset'),
+    category,
+    label: option ? option.label : 'Дополнительный актив',
+    name: '',
+    price: 0,
+    quantity: 0,
+    income: 0
+  });
+
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSheetTotals(round);
+  select.selectedIndex = 0;
+  saveGameData();
+}
+
+function removeSecretAssetRow(round, entryId) {
+  const sheet = ensureSecretSheet(round);
+  sheet.extraAssets = (sheet.extraAssets || []).filter(entry => entry.id !== entryId);
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSheetTotals(round);
+  saveGameData();
+}
+
+function secretAddChildPassive(round) {
+  const sheet = ensureSecretSheet(round);
+  sheet.additionalPassives = Array.isArray(sheet.additionalPassives) ? sheet.additionalPassives : [];
+  sheet.childrenCount = Number(sheet.childrenCount) || 3;
+  sheet.childrenCount += 1;
+  sheet.additionalPassives.push({
+    id: generateSecretEntryId('child'),
+    type: 'child',
+    label: `Процветание детей ${sheet.childrenCount}`,
+    amount: 0
+  });
+
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretPassivesTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSheetTotals(round);
+  saveGameData();
+}
+
+function secretAddPassiveRow(round) {
+  const sheet = ensureSecretSheet(round);
+  sheet.additionalPassives = Array.isArray(sheet.additionalPassives) ? sheet.additionalPassives : [];
+  sheet.additionalPassives.push({
+    id: generateSecretEntryId('passive'),
+    type: 'other',
+    label: 'Другой пассив',
+    amount: 0
+  });
+
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretPassivesTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSheetTotals(round);
+  saveGameData();
+}
+
+function removeSecretPassiveRow(round, entryId) {
+  const sheet = ensureSecretSheet(round);
+  sheet.additionalPassives = (sheet.additionalPassives || []).filter(entry => entry.id !== entryId);
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretPassivesTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSheetTotals(round);
+  saveGameData();
+}
+
+function parseLedgerAmount(raw) {
+  if (typeof raw === 'number') {
+    return raw;
+  }
+
+  if (typeof raw !== 'string') {
+    return 0;
+  }
+
+  const normalized = raw.replace(/\s+/g, '').replace(',', '.');
+  return Number(normalized);
+}
+
+function secretLedgerPaySalary(round) {
+  const sheet = ensureSecretSheet(round);
+  const amount = Number(sheet.totals?.regular) || 0;
+  if (amount <= 0) {
+    showModal('Зарплата', 'Регулярная прибыль пока не задана.');
+    return;
+  }
+
+  applySecretLedgerEntry(round, {
+    type: 'salary',
+    amount,
+    note: 'Зарплатный доход'
+  });
+}
+
+function secretLedgerApply(round, type) {
+  if (!['income', 'expense'].includes(type)) {
+    return;
+  }
+
+  if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
+    showModal('Учётная книга', 'Добавление записей доступно только в браузере.');
+    return;
+  }
+
+  const title = type === 'income' ? 'Доход' : 'Расход';
+  const amountPrompt = window.prompt(`${title}\nВведите сумму`, '');
+  if (amountPrompt === null) {
+    return;
+  }
+
+  const amount = parseLedgerAmount(amountPrompt);
+  if (!amount || amount <= 0 || Number.isNaN(amount)) {
+    showModal('Учётная книга', 'Введите корректную сумму.');
+    return;
+  }
+
+  let note = '';
+  const notePrompt = window.prompt(`${title}\nКомментарий (необязательно)`, '');
+  if (notePrompt !== null) {
+    note = notePrompt.trim();
+  }
+
+  applySecretLedgerEntry(round, {
+    type,
+    amount,
+    note
+  });
+}
+
+function applySecretLedgerEntry(round, entry) {
+  const sheet = ensureSecretSheet(round);
+  sheet.ledger = Array.isArray(sheet.ledger) ? sheet.ledger : [];
+  const signedAmount = entry.type === 'expense' ? -Math.abs(entry.amount || 0) : Math.abs(entry.amount || 0);
+  sheet.ledger.push({
+    id: generateSecretEntryId('ledger'),
+    type: entry.type,
+    amount: Math.abs(entry.amount || 0),
+    note: entry.note || '',
+    timestamp: Date.now()
+  });
+
+  gameData.wallet = (gameData.wallet || 0) + signedAmount;
+  gameData.secretData.sheets[round] = sheet;
+  renderSecretLedger(round, sheet);
+  updateSecretSummary();
+  saveGameData();
 }
 
 function updateSecretSheetTotals(round) {
   const totals = calculateSecretRoundTotals(round);
-  const incomeSpan = document.getElementById(`secretRound${round}IncomeTotal`);
   const expenseSpan = document.getElementById(`secretRound${round}ExpenseTotal`);
-
-  if (incomeSpan) {
-    incomeSpan.textContent = formatRub(totals.income);
-  }
 
   if (expenseSpan) {
     expenseSpan.textContent = formatRub(totals.expenses);
@@ -3145,39 +3500,19 @@ function calculateSecretRoundTotals(round) {
     return { income: 0, passiveIncome: 0, expenses: 0, net: 0 };
   }
 
-  let income = 0;
-  let passiveIncome = 0;
-
-  config.assets.forEach(item => {
-    const row = sheet.assets[item.key] || {};
-    const rowIncome = Number(row.income) || 0;
-    income += rowIncome;
-    if (item.countsTowardPassive) {
-      passiveIncome += rowIncome;
-    }
-  });
-
-  if (config.businessList && Array.isArray(sheet.businesses)) {
-    sheet.businesses.forEach(entry => {
-      const businessIncome = Number(entry.income) || 0;
-      income += businessIncome;
-      passiveIncome += businessIncome;
-    });
-  }
-
-  if (config.oligarchList && Array.isArray(sheet.oligarchs)) {
-    sheet.oligarchs.forEach(entry => {
-      const oligarchIncome = Number(entry.income) || 0;
-      income += oligarchIncome;
-      passiveIncome += oligarchIncome;
-    });
-  }
+  const income = Number(sheet.totals?.income) || 0;
+  const passiveIncome = Number(sheet.totals?.passive) || 0;
 
   let expenses = 0;
   Object.values(sheet.passives || {}).forEach(value => {
-    const payment = Number(value.payment) || 0;
-    expenses += payment;
+    expenses += Number(value.amount) || 0;
   });
+
+  (sheet.additionalPassives || []).forEach(entry => {
+    expenses += Number(entry.amount) || 0;
+  });
+
+  expenses += Number(sheet.credit?.payment) || 0;
 
   const net = income - expenses;
   return { income, passiveIncome, expenses, net };
@@ -3358,44 +3693,78 @@ function handleSecretFieldInput(event) {
   if (section === 'assets') {
     const key = target.dataset.secretKey;
     if (!sheet.assets[key]) {
-      sheet.assets[key] = { price: 0, quantity: 0, income: 0 };
+      sheet.assets[key] = { name: '', price: 0, quantity: 0, income: 0 };
     }
     const field = target.dataset.secretField;
-    sheet.assets[key][field] = Number(target.value) || 0;
+    if (field === 'name') {
+      sheet.assets[key].name = target.value;
+    } else {
+      sheet.assets[key][field] = Number(target.value) || 0;
+    }
+  } else if (section === 'extra-assets') {
+    const entryId = target.dataset.secretEntry;
+    sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
+    const entry = sheet.extraAssets.find(item => item.id === entryId);
+    if (entry) {
+      const field = target.dataset.secretField;
+      if (field === 'name') {
+        entry.name = target.value;
+      } else {
+        entry[field] = Number(target.value) || 0;
+      }
+    }
   } else if (section === 'passives') {
     const key = target.dataset.secretKey;
     if (!sheet.passives[key]) {
-      sheet.passives[key] = { amount: 0, payment: 0 };
+      sheet.passives[key] = { amount: 0 };
     }
     const field = target.dataset.secretField;
     sheet.passives[key][field] = Number(target.value) || 0;
-  } else if (section === 'businesses') {
+  } else if (section === 'additional-passives') {
     const entryId = target.dataset.secretEntry;
-    const field = target.dataset.secretField;
-    const entry = (sheet.businesses || []).find(item => item.id === entryId);
+    sheet.additionalPassives = Array.isArray(sheet.additionalPassives) ? sheet.additionalPassives : [];
+    const entry = sheet.additionalPassives.find(item => item.id === entryId);
     if (entry) {
-      if (field === 'name') {
-        entry.name = target.value;
-      } else if (field === 'cost') {
-        entry.cost = Number(target.value) || 0;
-      } else if (field === 'income') {
-        entry.income = Number(target.value) || 0;
+      const field = target.dataset.secretField;
+      if (field === 'label') {
+        entry.label = target.value;
+      } else {
+        entry.amount = Number(target.value) || 0;
       }
     }
-  } else if (section === 'oligarchs') {
-    const entryId = target.dataset.secretEntry;
+  } else if (section === 'marketing') {
+    const product = target.dataset.secretEntry;
     const field = target.dataset.secretField;
-    const sheet3 = ensureSecretSheet(3);
-    const entry = (sheet3?.oligarchs || []).find(item => item.id === entryId);
-    if (entry) {
-      if (field === 'name') {
-        entry.name = target.value;
-      } else if (field === 'cost') {
-        entry.cost = Number(target.value) || 0;
-      } else if (field === 'income') {
-        entry.income = Number(target.value) || 0;
+    sheet.marketing = sheet.marketing || { packages: { income: 0, count: 0 }, vitamins: { income: 0, count: 0 } };
+    if (!sheet.marketing[product]) {
+      sheet.marketing[product] = { income: 0, count: 0 };
+    }
+    sheet.marketing[product][field] = Number(target.value) || 0;
+    renderSecretNetwork(round, sheet);
+  } else if (section === 'totals') {
+    const field = target.dataset.secretField;
+    sheet.totals = sheet.totals || { income: 0, passive: 0, regular: 0, baseRegular: 0 };
+    if (field === 'regular') {
+      sheet.totals.regular = Number(target.value) || 0;
+    } else {
+      sheet.totals[field] = Number(target.value) || 0;
+      if (field === 'passive') {
+        sheet.totals.regular = Number(sheet.totals.baseRegular || 0) + sheet.totals.passive;
       }
     }
+    renderSecretTotals(round, sheet);
+  } else if (section === 'credit') {
+    const field = target.dataset.secretField;
+    sheet.credit = sheet.credit || { amount: 0, payment: 0, paid: 0 };
+    if (field === 'amount') {
+      sheet.credit.amount = Number(target.value) || 0;
+      sheet.credit.payment = Math.round((sheet.credit.amount || 0) * 0.1);
+    } else if (field === 'payment') {
+      sheet.credit.payment = Number(target.value) || 0;
+    } else if (field === 'paid') {
+      sheet.credit.paid = Number(target.value) || 0;
+    }
+    renderSecretCredit(round, sheet);
   } else if (section === 'notes') {
     sheet.notes = target.value;
   } else if (section === 'info') {
@@ -3408,65 +3777,8 @@ function handleSecretFieldInput(event) {
   }
 
   updateSecretSheetTotals(round);
-  if (section === 'oligarchs') {
-    updateSecretSheetTotals(3);
-  }
   updateSecretSummary();
   checkSecretUnlocks();
-  saveGameData();
-}
-
-function addSecretBusiness(round) {
-  const sheet = ensureSecretSheet(round);
-  if (!sheet || !Array.isArray(sheet.businesses)) {
-    return;
-  }
-
-  sheet.businesses.push(createEmptySecretBusiness());
-  renderSecretBusinessTable(round, sheet);
-}
-
-function removeSecretBusiness(round, entryId) {
-  const sheet = ensureSecretSheet(round);
-  if (!sheet || !Array.isArray(sheet.businesses)) {
-    return;
-  }
-
-  sheet.businesses = sheet.businesses.filter(entry => entry.id !== entryId);
-  if (sheet.businesses.length === 0) {
-    sheet.businesses.push(createEmptySecretBusiness());
-  }
-
-  renderSecretBusinessTable(round, sheet);
-  updateSecretSheetTotals(round);
-  updateSecretSummary();
-  saveGameData();
-}
-
-function addSecretOligarchAsset() {
-  const sheet = ensureSecretSheet(3);
-  if (!sheet || !Array.isArray(sheet.oligarchs)) {
-    return;
-  }
-
-  sheet.oligarchs.push(createEmptySecretOligarchEntry());
-  renderSecretOligarchTable(sheet);
-}
-
-function removeSecretOligarchAsset(entryId) {
-  const sheet = ensureSecretSheet(3);
-  if (!sheet || !Array.isArray(sheet.oligarchs)) {
-    return;
-  }
-
-  sheet.oligarchs = sheet.oligarchs.filter(entry => entry.id !== entryId);
-  if (sheet.oligarchs.length === 0) {
-    sheet.oligarchs.push(createEmptySecretOligarchEntry());
-  }
-
-  renderSecretOligarchTable(sheet);
-  updateSecretSheetTotals(3);
-  updateSecretSummary();
   saveGameData();
 }
 
