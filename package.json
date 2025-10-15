@@ -1,6 +1,6 @@
 {
   "name": "cash-flow-game",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Интерактивная веб-игра по мотивам настольной игры Роберта Кийосаки 'Денежный поток'",
   "main": "index.html",
   "scripts": {
