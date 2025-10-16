@@ -300,26 +300,26 @@ const secretOfMoneyProfessions = [
 
 const SECRET_ASSET_CATEGORIES = [
   { category: 'salary', label: 'Заработная плата', duplicates: 1, allowQuantity: false, allowName: false, includeOnRounds: [1] },
-  { category: 'realEstate', label: 'Недвижимость', duplicates: 1 },
+  { category: 'land', label: 'Земельные участки', duplicates: 1 },
   { category: 'construction', label: 'Строительство', duplicates: 1 },
-  { category: 'securities', label: 'Ценные бумаги', duplicates: 1 },
-  { category: 'business', label: 'Участие в бизнесе', duplicates: 1 },
+  { category: 'realEstate', label: 'Недвижимость', duplicates: 2 },
   { category: 'inventory', label: 'Закупка товара', duplicates: 2, includeOnRounds: [2, 3], trackRemaining: true },
-  { category: 'land', label: 'Земельные участки', includeOnRounds: [] },
-  { category: 'funds', label: 'Паевые фонды', includeOnRounds: [] },
-  { category: 'deposits', label: 'Банковские вклады', includeOnRounds: [] },
-  { category: 'privateLoans', label: 'Частные займы', includeOnRounds: [] },
-  { category: 'gold', label: 'Золотые изделия', includeOnRounds: [] },
-  { category: 'other', label: 'Другие активы', includeOnRounds: [] }
+  { category: 'securities', label: 'Ценные бумаги', duplicates: 2 },
+  { category: 'funds', label: 'Паевые фонды', duplicates: 2 },
+  { category: 'business', label: 'Участие в бизнесе', duplicates: 2 },
+  { category: 'deposits', label: 'Банковские вклады', duplicates: 1 },
+  { category: 'privateLoans', label: 'Частные займы', duplicates: 1 },
+  { category: 'gold', label: 'Золотые изделия', duplicates: 1 },
+  { category: 'other', label: 'Другие активы', duplicates: 1 }
 ];
 
 const SECRET_ASSET_FAMILY_STYLES = {
-  property: { accent: '#b47a6d', fill: '#f5ece9' },
-  securities: { accent: '#6d7fb2', fill: '#eef1f8' },
-  business: { accent: '#4f8a6d', fill: '#eef5f1' },
-  savings: { accent: '#7d8391', fill: '#f2f4f6' },
-  other: { accent: '#c5a65a', fill: '#f9f4e4' },
-  inventory: { accent: '#8a74b1', fill: '#f1ecfa' }
+  property: { accent: '#b35a5a', fill: '#fff4f1' },
+  securities: { accent: '#4c6fbf', fill: '#f1f5ff' },
+  business: { accent: '#2f7356', fill: '#f1f9f4' },
+  savings: { accent: '#6c7280', fill: '#f5f6f8' },
+  other: { accent: '#c9982a', fill: '#fff9e3' },
+  inventory: { accent: '#c17c4b', fill: '#fff4eb' }
 };
 
 const SECRET_ADDITIONAL_ASSET_OPTIONS = SECRET_ASSET_CATEGORIES
@@ -1072,18 +1072,10 @@ function selectProfession(index, type) {
     initializeCashFlowGame();
     navigateToScreen(6);
   } else {
-    selectedProfession = { ...secretOfMoneyProfessions[index] };
+    selectedProfession = secretOfMoneyProfessions[index];
     gameType = 'secret';
-    const initialized = initializeSecretGame();
-    if (initialized) {
-      navigateToScreen(7);
-    } else {
-      showModal(
-        'Не удалось открыть «Секрет денег»',
-        'Возникла ошибка при подготовке бланка. Попробуйте снова выбрать профессию '
-          + 'или обновите страницу.'
-      );
-    }
+    initializeSecretGame();
+    navigateToScreen(7);
   }
 }
 
@@ -1323,6 +1315,494 @@ function buildProfessionLiabilities() {
       paid: 0,
       closed: payment === 0 || value === 0
     };
+  });
+}
+
+function promptPartialLiability(index) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (gameData.wallet <= 0) {
+    showModal('Недостаточно средств', 'В кошельке нет средств для частичного погашения.');
+    return;
+  }
+
+  const maxAmount = Math.min(liability.balance, gameData.wallet);
+  if (maxAmount <= 0) {
+    showModal('Ошибка', 'Этот пассив уже погашен.');
+    return;
+  }
+
+  const promptMessage = `Введите сумму, которую готовы заплатить сейчас.\nДоступно в кошельке: ${formatCurrency(gameData.wallet)}\nОстаток долга: ${formatCurrency(liability.balance)}`;
+  const input = prompt(promptMessage, Math.min(1000, maxAmount));
+  if (input === null) {
+    return;
+  }
+
+  const amount = parseFloat(input);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму.');
+    return;
+  }
+
+  const forceClose = amount >= liability.balance;
+  payLiabilityAmount(index, amount, forceClose);
+}
+
+function closeLiabilityCompletely(index) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (gameData.wallet < liability.balance) {
+    showModal('Недостаточно средств', 'У вас недостаточно денег в кошельке, чтобы закрыть пассив полностью.');
+    return;
+  }
+
+  payLiabilityAmount(index, liability.balance, true);
+}
+
+function payLiabilityAmount(index, amount, forceClose = false) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите сумму погашения.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств в кошельке.');
+    return;
+  }
+
+  const previousBalance = liability.balance;
+  const previousPayment = liability.currentPayment || 0;
+  const payment = Math.min(amount, liability.balance);
+  gameData.wallet -= payment;
+  liability.balance = Math.max(0, liability.balance - payment);
+  liability.paid += payment;
+
+  let newPayment = previousPayment;
+  if (liability.originalBalance > 0 && liability.balance > 0) {
+    const ratio = liability.balance / liability.originalBalance;
+    newPayment = liability.originalPayment * ratio;
+    newPayment = Number(newPayment.toFixed(2));
+    if (newPayment < 0.01) {
+      newPayment = 0;
+    }
+  } else {
+    newPayment = 0;
+  }
+
+  if (liability.balance <= 0.01 || forceClose) {
+    liability.balance = 0;
+    liability.closed = true;
+    newPayment = 0;
+  }
+
+  liability.currentPayment = newPayment;
+
+  if (liability.expenseKey) {
+    gameData.expenses[liability.expenseKey] = newPayment;
+  }
+
+  updateCashFlowDisplay();
+
+  const formatted = payment.toLocaleString();
+  const freedDelta = Math.max(0, previousPayment - newPayment);
+  if (liability.closed) {
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Пассив погашен', `${liability.label}: -$${formatted}. Платеж переходит в ваш денежный поток.${freedMessage}`);
+  } else {
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Платеж учтен', `${liability.label}: -$${formatted}.${freedMessage}`);
+  }
+}
+
+function calculateFreedCashFlow() {
+  return gameData.liabilities.reduce((total, liability) => {
+    if (!liability.expenseKey) {
+      return total;
+    }
+    const freed = liability.originalPayment - liability.currentPayment;
+    return total + Math.max(0, freed);
+  }, 0);
+}
+
+function getEffectivePassiveIncome() {
+  return gameData.passiveIncome + calculateFreedCashFlow();
+}
+
+function renderLoans() {
+  const loansContainer = document.getElementById('loansList');
+  if (!loansContainer) return;
+
+  loansContainer.innerHTML = '';
+
+  if (!gameData.loans.length) {
+    const empty = document.createElement('div');
+    empty.className = 'loan-empty';
+    empty.textContent = 'Нет активных кредитов.';
+    loansContainer.appendChild(empty);
+    return;
+  }
+
+  gameData.loans.forEach((loan, index) => {
+    const item = document.createElement('div');
+    item.className = 'loan-item';
+
+    item.innerHTML = `
+      <div class="loan-header">
+        <span>Кредит #${index + 1}</span>
+        <span>Остаток: $${loan.remaining.toLocaleString()}</span>
+      </div>
+      <div class="loan-details">
+        <span>Выплачено: $${loan.paid.toLocaleString()} из $${loan.principal.toLocaleString()}</span>
+        <span>Обязательный платеж: $${loan.payment.toLocaleString()}</span>
+      </div>
+    `;
+
+    const controls = document.createElement('div');
+    controls.className = 'loan-controls';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '1';
+    input.placeholder = 'Сумма платежа';
+
+    const payButton = document.createElement('button');
+    payButton.textContent = 'Оплатить';
+    payButton.onclick = () => {
+      recordLoanPayment(index, parseFloat(input.value));
+      input.value = '';
+    };
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'outline';
+    closeButton.textContent = 'Закрыть кредит';
+    closeButton.onclick = () => {
+      recordLoanPayment(index, loan.remaining);
+    };
+
+    controls.appendChild(input);
+    controls.appendChild(payButton);
+    controls.appendChild(closeButton);
+    item.appendChild(controls);
+    loansContainer.appendChild(item);
+  });
+}
+
+function recordLoanPayment(index, amount) {
+  const loan = gameData.loans[index];
+  if (!loan) {
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите сумму платежа по кредиту.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
+    return;
+  }
+
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
+  updateCashFlowDisplay();
+}
+
+function updateCashFlowDisplay() {
+  if (!selectedProfession) return;
+
+  // Обновить название профессии
+  document.getElementById('selectedProfession').textContent = selectedProfession.name;
+
+  const stageLabel = document.getElementById('cashflowStageLabel');
+  if (stageLabel) {
+    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиные гонки' : 'Этап 2: Быстрый трек';
+  }
+
+  const nickname = currentUser?.nickname || 'Гость';
+  const nicknameDisplay = document.getElementById('playerNicknameDisplay');
+  if (nicknameDisplay) {
+    nicknameDisplay.textContent = nickname;
+  }
+
+  const professionDisplay = document.getElementById('stage1ProfessionName');
+  if (professionDisplay) {
+    professionDisplay.textContent = selectedProfession.name;
+  }
+
+  const dreamInput = document.getElementById('playerDream');
+  const stage2DreamDisplay = document.getElementById('stage2DreamDisplay');
+  if (stage2DreamDisplay) {
+    const dreamValue = dreamInput && dreamInput.value.trim() ? dreamInput.value.trim() : '—';
+    stage2DreamDisplay.textContent = dreamValue;
+  }
+
+  // Обновить основные показатели
+  document.getElementById('walletAmount').textContent = `$${gameData.wallet.toLocaleString()}`;
+  const effectivePassive = getEffectivePassiveIncome();
+  document.getElementById('passiveIncomeAmount').textContent = `$${effectivePassive.toLocaleString()}`;
+  document.getElementById('salaryAmount').textContent = `$${selectedProfession.salary.toLocaleString()}`;
+
+  // Обновить расходы
+  updateExpensesDisplay();
+  renderLiabilities();
+  renderLoans();
+  renderStocks();
+  renderRealEstate();
+  renderBusinesses();
+  updateTotalExpenses();
+
+  // Пересчитать доходы
+  updateTotalIncome();
+
+  // Обновить доступный кредит
+  updateAvailableCredit();
+
+  // Обновить кнопку этапов
+  updateStageButtons();
+
+  if (stageTwoUnlocked) {
+    updateStage2Display();
+  }
+}
+
+function updateExpensesDisplay() {
+  const fixedExpensesContainer = document.getElementById('fixedExpenses');
+  if (!fixedExpensesContainer || !selectedProfession) return;
+
+  const expenseLabels = {
+    taxes: 'Налоги',
+    homePayment: 'Оплата залога/аренды',
+    schoolLoan: 'Кредит на обучение',
+    carLoan: 'Кредит на автомобиль',
+    creditCard: 'Кредитная карта',
+    retail: 'Розничные расходы',
+    other: 'Прочие расходы'
+  };
+
+  fixedExpensesContainer.innerHTML = '';
+
+  Object.entries(gameData.expenses).forEach(([key, value]) => {
+    if (key === 'childExpensePerChild') {
+      return;
+    }
+
+    const expenseItem = document.createElement('div');
+    expenseItem.className = 'expense-item';
+    const label = expenseLabels[key] || key;
+    expenseItem.innerHTML = `
+      <label>${label}:</label>
+      <span>$${value.toLocaleString()}</span>
+    `;
+    fixedExpensesContainer.appendChild(expenseItem);
+  });
+
+  if (gameData.loans.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'expense-divider';
+    divider.textContent = 'Кредиты';
+    fixedExpensesContainer.appendChild(divider);
+
+    gameData.loans.forEach((loan, index) => {
+      const expenseItem = document.createElement('div');
+      expenseItem.className = 'expense-item loan-expense';
+      expenseItem.innerHTML = `
+        <label>Кредит #${index + 1}</label>
+        <span>$${loan.payment.toLocaleString()}</span>
+      `;
+      fixedExpensesContainer.appendChild(expenseItem);
+    });
+  }
+
+  renderCustomExpenses();
+}
+
+function renderCustomExpenses() {
+  const list = document.getElementById('customExpensesList');
+  if (!list) return;
+
+  list.innerHTML = '';
+  const extras = Array.isArray(gameData.additionalExpenses) ? gameData.additionalExpenses : [];
+
+  if (!extras.length) {
+    const empty = document.createElement('div');
+    empty.className = 'custom-expense-empty';
+    empty.textContent = 'Дополнительные расходы пока не добавлены.';
+    list.appendChild(empty);
+    return;
+  }
+
+  extras.forEach(expense => {
+    const item = document.createElement('div');
+    item.className = 'custom-expense-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = expense.name;
+    const amountSpan = document.createElement('span');
+    amountSpan.textContent = formatCurrency(expense.amount);
+
+    const removeButton = document.createElement('button');
+    removeButton.textContent = 'Удалить';
+    removeButton.onclick = () => removeCustomExpense(expense.id);
+
+    item.appendChild(nameSpan);
+    item.appendChild(amountSpan);
+    item.appendChild(removeButton);
+    list.appendChild(item);
+  });
+}
+
+function addCustomExpense() {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    gameData.additionalExpenses = [];
+  }
+
+  const nameInput = prompt('Опишите новый расход (например, «Автомобиль»).');
+  if (nameInput === null) {
+    return;
+  }
+
+  const name = nameInput.trim();
+  if (!name) {
+    showModal('Ошибка', 'Введите название расхода.');
+    return;
+  }
+
+  const amountInput = prompt('Укажите сумму ежемесячного расхода в долларах.');
+  if (amountInput === null) {
+    return;
+  }
+
+  const amount = parseFloat(amountInput);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму расхода.');
+    return;
+  }
+
+  const expense = {
+    id: Date.now(),
+    name,
+    amount: Number(amount.toFixed(2))
+  };
+
+  gameData.additionalExpenses.push(expense);
+  const stats = ensureTurnStats();
+  stats.additionalExpenses += expense.amount;
+
+  updateCashFlowDisplay();
+  showModal('Дополнительный расход добавлен', `${expense.name}: ${formatCurrency(expense.amount)} будет учитываться в расходах.`);
+}
+
+function removeCustomExpense(id) {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    return;
+  }
+
+  const index = gameData.additionalExpenses.findIndex(expense => expense.id === id);
+  if (index === -1) {
+    return;
+  }
+
+  const [removed] = gameData.additionalExpenses.splice(index, 1);
+  updateCashFlowDisplay();
+  showModal('Расход удален', `${removed.name} больше не учитывается в расходах.`);
+}
+
+function renderLiabilities() {
+  const liabilitiesContainer = document.getElementById('liabilitiesList');
+  if (!liabilitiesContainer) return;
+
+  liabilitiesContainer.innerHTML = '';
+
+  if (!gameData.liabilities.length) {
+    const empty = document.createElement('div');
+    empty.className = 'liability-empty';
+    empty.textContent = 'Все пассивы погашены.';
+    liabilitiesContainer.appendChild(empty);
+    return;
+  }
+
+  gameData.liabilities.forEach((liability, index) => {
+    const item = document.createElement('div');
+    item.className = 'liability-item';
+    if (liability.closed) {
+      item.classList.add('liability-closed');
+    }
+
+    const freed = Math.max(0, liability.originalPayment - liability.currentPayment);
+
+    item.innerHTML = `
+      <div class="liability-header">
+        <div>
+          <div class="liability-name">${liability.label}</div>
+          <div class="liability-balance">Остаток: $${liability.balance.toLocaleString()}</div>
+          <div class="liability-progress">Выплачено: $${liability.paid.toLocaleString()} из $${liability.originalBalance.toLocaleString()}</div>
+        </div>
+        <div class="liability-payment">Текущий платеж: $${liability.currentPayment.toLocaleString()}</div>
+      </div>
+    `;
+
+    if (liability.expenseKey && liability.originalPayment > 0) {
+      const summary = document.createElement('div');
+      summary.className = 'liability-extra';
+      summary.innerHTML = `
+        <span>Освобождено ежемесячно</span>
+        <span class="liability-freed">$${freed.toLocaleString()}</span>
+      `;
+      item.appendChild(summary);
+
+      const actions = document.createElement('div');
+      actions.className = 'liability-actions';
+
+      const partialButton = document.createElement('button');
+      partialButton.className = 'liability-action partial';
+      partialButton.textContent = 'Закрыть часть';
+      partialButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet <= 0;
+      partialButton.onclick = () => {
+        promptPartialLiability(index);
+      };
+
+      const fullButton = document.createElement('button');
+      fullButton.className = 'liability-action full';
+      fullButton.textContent = 'Закрыть полностью';
+      fullButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet < liability.balance;
+      fullButton.onclick = () => {
+        closeLiabilityCompletely(index);
+      };
+
+      actions.appendChild(partialButton);
+      actions.appendChild(fullButton);
+      item.appendChild(actions);
+    }
+
+    liabilitiesContainer.appendChild(item);
   });
 }
 
@@ -2385,438 +2865,24 @@ function addExpense() {
     return;
   }
 
-  cashFlowStage = stage;
-
-  const stage1Form = document.getElementById('stage1Form');
-  const stage2Form = document.getElementById('stage2Form');
-  if (stage1Form) {
-    stage1Form.classList.toggle('active', stage === 1);
-  }
-  if (stage2Form) {
-    stage2Form.classList.toggle('active', stage === 2);
-  }
-
-  updateCashFlowDisplay();
-  updateStageButtons();
-}
-
-function updateStageButtons() {
-  const stage1Button = document.getElementById('stage1Button');
-  const stage2Button = document.getElementById('stage2Button');
-
-  if (stage1Button) {
-    stage1Button.classList.toggle('active', cashFlowStage === 1);
-  }
-
-  if (stage2Button) {
-    stage2Button.disabled = !stageTwoUnlocked;
-    stage2Button.classList.toggle('active', cashFlowStage === 2);
-  }
-
-  const stageLabel = document.getElementById('cashflowStageLabel');
-  if (stageLabel) {
-    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиные гонки' : 'Этап 2: Быстрый трек';
-  }
-}
-
-function updateStage2Display() {
-  const stageState = ensureStageTwoState();
-  stageTwoReportUnlocked = !!stageState.reportUnlocked;
-  stageTwoVictoryCelebrated = !!stageState.victoryCelebrated;
-
-  const baseElement = document.getElementById('stage2BasePassive');
-  if (baseElement) {
-    baseElement.textContent = stageTwoBasePassive.toLocaleString();
-  }
-
-  const walletElement = document.getElementById('stage2WalletAmount');
-  if (walletElement) {
-    walletElement.textContent = gameData.wallet.toLocaleString();
-  }
-
-  if (!stageTwoUnlocked) {
-    const passiveElement = document.getElementById('stage2PassiveIncome');
-    if (passiveElement) {
-      passiveElement.textContent = '0';
-    }
-    const totalElement = document.getElementById('stage2TotalPassive');
-    if (totalElement) {
-      totalElement.textContent = '0';
-    }
-    const salaryButton = document.getElementById('stage2SalaryButton');
-    if (salaryButton) {
-      salaryButton.textContent = 'Зарплата';
-    }
-    const expenseButton = document.getElementById('stage2ExpenseButton');
-    if (expenseButton) {
-      expenseButton.textContent = 'Расход';
-    }
-    updateStageGoalStatus();
-    return;
-  }
-
-  recalculateStageTwoAdditionalPassive();
-
-  const fastTrackPassive = stageTwoInitialPassive;
-  const totalPassive = getStageTwoPassiveIncome();
-
-  const passiveIncomeElement = document.getElementById('stage2PassiveIncome');
-  if (passiveIncomeElement) {
-    passiveIncomeElement.textContent = fastTrackPassive.toLocaleString();
-  }
-
-  const totalPassiveElement = document.getElementById('stage2TotalPassive');
-  if (totalPassiveElement) {
-    totalPassiveElement.textContent = totalPassive.toLocaleString();
-  }
-
-  const targetElement = document.getElementById('stage2TargetIncome');
-  if (targetElement) {
-    targetElement.textContent = STAGE_TWO_TARGET_INCREMENT.toLocaleString();
-  }
-
-  const salaryButton = document.getElementById('stage2SalaryButton');
-  if (salaryButton) {
-    salaryButton.textContent = `Зарплата +$${totalPassive.toLocaleString()}`;
-  }
-
-  const expenseButton = document.getElementById('stage2ExpenseButton');
-  if (expenseButton) {
-    expenseButton.textContent = 'Расход';
-  }
-
-  renderStageTwoReport();
-  updateStageGoalStatus();
-}
-
-function getStageTwoPassiveIncome() {
-  return stageTwoInitialPassive + stageTwoAdditionalPassive;
-}
-
-function addStageTwoPassiveIncome() {
-  if (!stageTwoUnlocked) {
-    showModal('Этап 2 недоступен', 'Сначала завершите цели первого этапа.');
-    return;
-  }
-
-  const input = document.getElementById('stage2PassiveInput');
-  const amount = parseFloat(input?.value);
-
-  if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму пассивного дохода.');
-    return;
-  }
-
-  stageTwoManualPassive += amount;
-  recalculateStageTwoAdditionalPassive();
-  persistStageTwoState();
-  if (input) {
-    input.value = '';
-  }
-
-  updateStage2Display();
-
-  showModal('Пассивный доход добавлен', `+$${amount.toLocaleString()}`);
-}
-
-function updateStageGoalStatus() {
-  const increaseElement = document.getElementById('stage2IncreaseAmount');
-  const targetElement = document.getElementById('stage2TargetIncome');
-  const passiveButton = document.getElementById('passiveGoalButton');
-  const passiveCard = document.getElementById('passiveGoalCard');
-  const dreamButton = document.getElementById('dreamGoalButton');
-  const dreamCard = document.getElementById('dreamGoalCard');
-  const dreamDisplay = document.getElementById('stage2DreamDisplay');
-
-  const increase = Math.max(0, getStageTwoPassiveIncome() - stageTwoInitialPassive);
-
-  if (increaseElement) {
-    increaseElement.textContent = increase.toLocaleString();
-  }
-
-  if (targetElement) {
-    targetElement.textContent = STAGE_TWO_TARGET_INCREMENT.toLocaleString();
-  }
-
-  const passiveReady = stageTwoUnlocked && !stageTwoPassiveGoalClaimed && increase >= STAGE_TWO_TARGET_INCREMENT;
-  if (passiveButton) {
-    passiveButton.disabled = !passiveReady;
-  }
-  if (passiveCard) {
-    passiveCard.classList.toggle('ready', passiveReady);
-    passiveCard.classList.toggle('completed', stageTwoPassiveGoalClaimed);
-  }
-
-  const dreamValue = dreamDisplay ? dreamDisplay.textContent : '—';
-  const dreamReady = stageTwoUnlocked && !stageTwoDreamGoalClaimed && dreamValue && dreamValue !== '—';
-  if (dreamButton) {
-    dreamButton.disabled = !dreamReady;
-  }
-  if (dreamCard) {
-    dreamCard.classList.toggle('ready', dreamReady);
-    dreamCard.classList.toggle('completed', stageTwoDreamGoalClaimed);
-  }
-
-  handleGoalMilestones();
-}
-
-function handleGoalMilestones() {
-  const notice = document.getElementById('stage2GoalNotice');
-  const noticeMessage = document.getElementById('stage2GoalNoticeMessage');
-  const victory = document.getElementById('stage2VictoryBanner');
-  const reportButton = document.getElementById('stage2ReportButton');
-
-  if (!notice || !victory || !reportButton) {
-    return;
-  }
-
-  if (!stageTwoUnlocked) {
-    notice.classList.remove('active');
-    victory.classList.remove('active');
-    reportButton.classList.remove('visible');
-    reportButton.disabled = true;
-    stageTwoReportUnlocked = false;
-    stageTwoVictoryCelebrated = false;
-    if (stageTwoReportTimer) {
-      clearTimeout(stageTwoReportTimer);
-      stageTwoReportTimer = null;
-    }
-    persistStageTwoState();
-    return;
-  }
-
-  const completedPassive = stageTwoPassiveGoalClaimed;
-  const completedDream = stageTwoDreamGoalClaimed;
-  const completedCount = (completedPassive ? 1 : 0) + (completedDream ? 1 : 0);
-
-  if (completedCount === 1) {
-    notice.classList.add('active');
-    if (noticeMessage) {
-      noticeMessage.textContent = completedPassive
-        ? 'Осталось подтвердить мечту, чтобы завершить игру.'
-        : 'Увеличьте пассивный доход минимум на $50 000, чтобы завершить игру.';
-    }
-  } else {
-    notice.classList.remove('active');
-  }
-
-  if (completedCount === 2) {
-    victory.classList.add('active');
-    if (!stageTwoVictoryCelebrated) {
-      stageTwoVictoryCelebrated = true;
-      victory.classList.add('celebrate');
-      setTimeout(() => victory.classList.remove('celebrate'), 2500);
-    }
-
-    if (stageTwoReportTimer) {
-      clearTimeout(stageTwoReportTimer);
-      stageTwoReportTimer = null;
-    }
-
-    if (!stageTwoReportUnlocked) {
-      reportButton.classList.remove('visible');
-      reportButton.disabled = true;
-      stageTwoReportTimer = setTimeout(() => {
-        stageTwoReportUnlocked = true;
-        reportButton.classList.add('visible');
-        reportButton.disabled = false;
-        persistStageTwoState();
-      }, 5000);
-    } else {
-      reportButton.classList.add('visible');
-      reportButton.disabled = false;
-    }
-  } else {
-    victory.classList.remove('active');
-    reportButton.classList.remove('visible');
-    reportButton.disabled = true;
-    stageTwoReportUnlocked = false;
-    stageTwoVictoryCelebrated = false;
-    if (stageTwoReportTimer) {
-      clearTimeout(stageTwoReportTimer);
-      stageTwoReportTimer = null;
-    }
-  }
-
-  persistStageTwoState();
-}
-
-function recalculateStageTwoAdditionalPassive() {
-  const businessPassive = stageTwoBusinesses.reduce((sum, business) => sum + business.income, 0);
-  stageTwoAdditionalPassive = stageTwoManualPassive + businessPassive;
-}
-
-function persistStageTwoState() {
-  const state = ensureStageTwoState();
-  state.manualPassive = stageTwoManualPassive;
-  state.businesses = stageTwoBusinesses.map(business => ({ ...business }));
-  state.passiveGoalClaimed = stageTwoPassiveGoalClaimed;
-  state.dreamGoalClaimed = stageTwoDreamGoalClaimed;
-  state.reportUnlocked = stageTwoReportUnlocked;
-  state.victoryCelebrated = stageTwoVictoryCelebrated;
-}
-
-function renderStageTwoReport() {
-  const tableBody = document.getElementById('stage2ReportBody');
-  if (!tableBody) return;
-
-  tableBody.innerHTML = '';
-
-  let runningTotal = stageTwoInitialPassive;
-
-  stageTwoBusinesses.forEach((business, index) => {
-    runningTotal += business.income;
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${business.name}</td>
-      <td>$${business.income.toLocaleString()}</td>
-      <td>$${runningTotal.toLocaleString()}</td>
-      <td><button class="outline" onclick="removeStageTwoBusiness(${index})">Удалить</button></td>
-    `;
-    tableBody.appendChild(row);
-  });
-
-  const newRow = document.createElement('tr');
-  newRow.className = 'new-asset-row';
-  newRow.innerHTML = `
-    <td><input type="text" placeholder="Название бизнеса"></td>
-    <td><input type="number" min="0" placeholder="Доход в месяц"></td>
-    <td colspan="2"><button class="buy-btn">Добавить</button></td>
-  `;
-  newRow.querySelector('button').onclick = () => addStageTwoBusiness(newRow);
-  tableBody.appendChild(newRow);
-}
-
-function addStageTwoBusiness(row) {
-  const inputs = row.querySelectorAll('input');
-  const name = inputs[0].value.trim();
-  const income = parseFloat(inputs[1].value);
-
-  if (!name || !income || income <= 0) {
-    showModal('Ошибка', 'Введите название бизнеса и его доход.');
-    return;
-  }
-
-  const summary = [`Название: ${name}`, `Доход: $${income.toLocaleString()} / месяц`, '', 'Подтвердить добавление бизнеса?'].join('\n');
-
-  if (!confirm(summary)) {
-    return;
-  }
-
-  stageTwoBusinesses.push({ name, income });
-  inputs.forEach(input => (input.value = ''));
-  recalculateStageTwoAdditionalPassive();
-  persistStageTwoState();
-  updateStage2Display();
-  showModal('Бизнес добавлен', `${name}: +$${income.toLocaleString()} к пассивному доходу быстрого трека.`);
-}
-
-function removeStageTwoBusiness(index) {
-  const [removed] = stageTwoBusinesses.splice(index, 1);
-  if (!removed) return;
-
-  recalculateStageTwoAdditionalPassive();
-  persistStageTwoState();
-  updateStage2Display();
-  showModal('Запись удалена', `${removed.name} убран из финансового отчета.`);
-}
-
-function confirmPassiveGoal() {
-  if (!stageTwoUnlocked || stageTwoPassiveGoalClaimed) {
-    return;
-  }
-
-  const increase = Math.max(0, getStageTwoPassiveIncome() - stageTwoInitialPassive);
-  if (increase < STAGE_TWO_TARGET_INCREMENT) {
-    showModal('Еще рано', 'Увеличьте пассивный доход минимум на $50 000, чтобы подтвердить цель.');
-    return;
-  }
-
-  if (!confirm('Подтвердить достижение цели по увеличению пассивного дохода?')) {
-    return;
-  }
-
-  stageTwoPassiveGoalClaimed = true;
-  persistStageTwoState();
-  const card = document.getElementById('passiveGoalCard');
-  if (card) {
-    card.classList.add('celebrate');
-    setTimeout(() => card.classList.remove('celebrate'), 2000);
-  }
-  updateStageGoalStatus();
-  showModal('Цель достигнута', 'Пассивный доход увеличен на $50 000 и более!');
-}
-
-function confirmDreamGoal() {
-  if (!stageTwoUnlocked || stageTwoDreamGoalClaimed) {
-    return;
-  }
-
-  const dreamDisplay = document.getElementById('stage2DreamDisplay');
-  const dreamValue = dreamDisplay ? dreamDisplay.textContent : '—';
-
-  if (!dreamValue || dreamValue === '—') {
-    showModal('Мечта не указана', 'Введите мечту на первом этапе, чтобы подтвердить ее покупку.');
-    return;
-  }
-
-  if (!confirm(`Подтвердить покупку мечты: "${dreamValue}"?`)) {
-    return;
-  }
-
-  stageTwoDreamGoalClaimed = true;
-  dreamPurchased = true;
-  persistStageTwoState();
-  const card = document.getElementById('dreamGoalCard');
-  if (card) {
-    card.classList.add('celebrate');
-    setTimeout(() => card.classList.remove('celebrate'), 2000);
-  }
-  updateStageGoalStatus();
-  showModal('Мечта исполнена', `Поздравляем! Мечта "${dreamValue}" куплена.`);
-}
-
-function collectFastTrackSalary() {
-  if (!stageTwoUnlocked) {
-    showModal('Этап 2 недоступен', 'Сначала выполните условия быстрого трека.');
-    return;
-  }
-
-  const amount = getStageTwoPassiveIncome();
-  if (amount <= 0) {
-    showModal('Нет дохода', 'Пассивный доход быстрого трека пока равен нулю.');
-    return;
-  }
-
-  gameData.wallet += amount;
-  updateCashFlowDisplay();
-  showModal('Зарплата получена', `+$${amount.toLocaleString()}`);
-}
-
-function recordFastTrackExpense() {
-  if (!stageTwoUnlocked) {
-    showModal('Этап 2 недоступен', 'Сначала выполните условия быстрого трека.');
-    return;
-  }
-
-  const suggestion = getStageTwoPassiveIncome();
-  const input = prompt('Введите сумму расхода быстрого трека', suggestion);
-  if (input === null) {
-    return;
-  }
-
-  const amount = parseFloat(input);
-  if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму расхода.');
-    return;
-  }
-
   if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств в кошельке.');
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
     return;
   }
 
-  gameData.wallet -= amount;
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -3541,62 +3607,36 @@ function closeFinalReport() {
 // === СЕКРЕТ ДЕНЕГ ИГРА ===
 
 function initializeSecretGame() {
-  if (!selectedProfession) return false;
+  if (!selectedProfession) return;
 
   if (secretVictoryTimer) {
     clearTimeout(secretVictoryTimer);
     secretVictoryTimer = null;
   }
 
-  const assignFreshSecretState = () => {
-    const freshState = createEmptySecretState();
-    freshState.playerInfo.profession = selectedProfession ? selectedProfession.name : '';
-    if (currentUser && currentUser.nickname) {
-      freshState.playerInfo.player = currentUser.nickname;
-    }
-    gameData.secretData = ensureSecretState(freshState);
-    gameData.secretData.round = 1;
-    gameData.secretData.unlockedRounds = [1];
-    gameData.secretData.passiveIncome = 0;
-    gameData.secretData.warehouseFeeDeducted = false;
-    gameData.secretData.goals = createDefaultSecretGoals();
-    gameData.secretData.playerInfo.dreamConfirmed = false;
-    gameData.wallet = Number(selectedProfession.savings) || 0;
-  };
+  gameData.secretData = ensureSecretState(createEmptySecretState());
+  gameData.secretData.round = 1;
+  gameData.secretData.unlockedRounds = [1];
+  gameData.secretData.passiveIncome = 0;
+  gameData.secretData.warehouseFeeDeducted = false;
+  gameData.secretData.goals = createDefaultSecretGoals();
+  gameData.secretData.playerInfo.dreamConfirmed = false;
 
-  const finalizeInitialization = () => {
-    ensureSecretBaseSheets();
-    applySecretProfessionDefaults();
-    renderSecretSheets();
-    syncSecretInfoFields();
-    renderSecretRoundTabs();
-    setSecretRound(1, { silent: true });
-    updateSecretSummary();
-    checkSecretUnlocks();
-    saveGameData();
-  };
-
-  assignFreshSecretState();
-
-  try {
-    finalizeInitialization();
-    return true;
-  } catch (error) {
-    console.error('Не удалось инициализировать «Секрет денег» с сохранёнными данными:', error);
-    showModal(
-      'Данные «Секрет денег» сброшены',
-      'При восстановлении прежнего листа возникла ошибка, поэтому бланк был создан заново.'
-    );
-
-    try {
-      assignFreshSecretState();
-      finalizeInitialization();
-      return true;
-    } catch (fallbackError) {
-      console.error('Повторная инициализация «Секрет денег» завершилась ошибкой:', fallbackError);
-      return false;
-    }
+  gameData.wallet = Number(selectedProfession.savings) || 0;
+  gameData.secretData.playerInfo.profession = selectedProfession.name;
+  if (!gameData.secretData.playerInfo.player && currentUser && currentUser.nickname) {
+    gameData.secretData.playerInfo.player = currentUser.nickname;
   }
+
+  ensureSecretBaseSheets();
+  applySecretProfessionDefaults();
+  renderSecretSheets();
+  syncSecretInfoFields();
+  renderSecretRoundTabs();
+  setSecretRound(1, { silent: true });
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
 }
 
 function applySecretProfessionDefaults() {
@@ -3709,67 +3749,28 @@ function renderSecretSheet(round) {
 }
 
 function renderSecretAssetsTable(round, sheet, config) {
-  const mainBody = document.getElementById(`secretRound${round}Assets`);
-  const inventoryBody = document.getElementById(`secretRound${round}Inventory`);
-  if (mainBody) {
-    mainBody.innerHTML = '';
-  }
-  if (inventoryBody) {
-    inventoryBody.innerHTML = '';
-  }
+  const body = document.getElementById(`secretRound${round}Assets`);
+  if (!body) return;
 
+  body.innerHTML = '';
   const rows = typeof config.getAssetRows === 'function' ? config.getAssetRows() : [];
 
-  sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
-  if (!sheet.migratedAssets) {
-    const validKeys = new Set(rows.map(item => item.key));
-    Object.entries(sheet.assets || {}).forEach(([key, value]) => {
-      if (!validKeys.has(key) && value && typeof value === 'object') {
-        const baseCategory = key.split('_')[0];
-        const definition = SECRET_ASSET_CATEGORIES.find(cat => cat.category === baseCategory);
-        sheet.extraAssets.push({
-          id: generateSecretEntryId('asset'),
-          category: value.category || (definition ? definition.category : baseCategory) || 'other',
-          label: value.label || (definition ? definition.label : 'Дополнительный актив'),
-          name: value.name || '',
-          price: Number(value.price) || 0,
-          quantity: value.allowQuantity === false ? 1 : (Number(value.quantity) || 0),
-          income: Number(value.income) || 0,
-          allowQuantity: value.allowQuantity === false ? false : true,
-          confirmed: !!value.confirmed,
-          appliedIncome: Number(value.appliedIncome) || 0,
-          trackRemaining: !!value.trackRemaining,
-          remaining: Number(value.remaining) || 0
-        });
-        delete sheet.assets[key];
-      }
-    });
-    sheet.migratedAssets = true;
-  }
-
-  gameData.secretData.sheets[round] = sheet;
-
-  const appendRow = (container, source) => {
-    if (!container) return;
-
-    const isExtra = source.type === 'extra';
-    const item = source.item;
-    const entry = source.entry;
-    const label = isExtra ? (entry.label || 'Дополнительный актив') : item.label;
-    const category = isExtra ? (entry.category || 'other') : (item.category || 'other');
-    const family = getSecretAssetFamily(category);
-    const allowQuantity = isExtra ? (entry.allowQuantity === false ? false : true) : (item.allowQuantity !== false);
-    const allowName = isExtra ? true : item.allowName !== false;
-    const trackRemaining = isExtra ? !!entry.trackRemaining : !!item.trackRemaining;
-    const values = source.values;
-    const isSalary = category === 'salary';
-
+  rows.forEach(item => {
+    const defaults = {
+      name: '',
+      price: 0,
+      quantity: item.allowQuantity ? 0 : 1,
+      income: 0,
+      confirmed: false,
+      appliedIncome: 0,
+      remaining: 0,
+      trackRemaining: !!item.trackRemaining
+    };
+    const values = { ...defaults, ...(sheet.assets[item.key] || {}) };
     const row = document.createElement('tr');
     row.className = 'secret-asset-row';
-    if (isExtra) {
-      row.classList.add('extra');
-    }
-    row.dataset.category = category;
+    row.dataset.category = item.category;
+    const family = getSecretAssetFamily(item.category);
     row.dataset.family = family;
     const familyStyle = SECRET_ASSET_FAMILY_STYLES[family];
     if (familyStyle) {
@@ -3780,215 +3781,205 @@ function renderSecretAssetsTable(round, sheet, config) {
       row.classList.add('confirmed');
     }
 
+    const trackRemaining = !!(item.trackRemaining || values.trackRemaining);
+    values.trackRemaining = trackRemaining;
+
     const labelCell = document.createElement('th');
-    const labelWrapper = document.createElement('div');
-    labelWrapper.className = 'asset-label-wrapper';
-    const labelHeader = document.createElement('div');
-    labelHeader.className = 'asset-label-header';
-    const labelTitle = document.createElement('span');
-    labelTitle.className = 'asset-label-title';
-    labelTitle.textContent = label;
-    labelHeader.appendChild(labelTitle);
+    labelCell.textContent = item.label;
 
-    if (isExtra) {
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn';
-      removeBtn.innerHTML = '<span aria-hidden="true">×</span>';
-      removeBtn.title = 'Удалить колонку';
-      removeBtn.onclick = () => removeSecretAssetRow(round, entry.id);
-      labelHeader.appendChild(removeBtn);
-    }
-
-    labelWrapper.appendChild(labelHeader);
-
-    if (allowName) {
+    const nameCell = document.createElement('td');
+    if (item.allowName) {
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.value = values.name || '';
-      nameInput.className = 'asset-name-input';
       nameInput.dataset.secretRound = round;
+      nameInput.dataset.secretSection = 'assets';
+      nameInput.dataset.secretKey = item.key;
       nameInput.dataset.secretField = 'name';
-      if (isExtra) {
-        nameInput.dataset.secretSection = 'extra-assets';
-        nameInput.dataset.secretEntry = entry.id;
-      } else {
-        nameInput.dataset.secretSection = 'assets';
-        nameInput.dataset.secretKey = item.key;
-      }
-      labelWrapper.appendChild(nameInput);
+      nameCell.appendChild(nameInput);
+    } else {
+      nameCell.innerHTML = '<span class="placeholder">—</span>';
     }
-
-    labelCell.appendChild(labelWrapper);
 
     const priceCell = document.createElement('td');
-    if (isSalary) {
-      priceCell.innerHTML = '<span class="placeholder">—</span>';
-    } else {
-      const priceInput = document.createElement('input');
-      priceInput.type = 'number';
-      priceInput.min = '0';
-      priceInput.step = '100';
-      priceInput.value = values.price || 0;
-      priceInput.dataset.secretRound = round;
-      priceInput.dataset.secretField = 'price';
-      if (isExtra) {
-        priceInput.dataset.secretSection = 'extra-assets';
-        priceInput.dataset.secretEntry = entry.id;
-      } else {
-        priceInput.dataset.secretSection = 'assets';
-        priceInput.dataset.secretKey = item.key;
-      }
-      priceCell.appendChild(priceInput);
-    }
+    priceCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="price" value="${values.price || 0}">`;
 
     const quantityCell = document.createElement('td');
-    if (!isSalary && allowQuantity) {
-      const quantityInput = document.createElement('input');
-      quantityInput.type = 'number';
-      quantityInput.min = '0';
-      quantityInput.step = '1';
-      quantityInput.value = values.quantity || 0;
-      quantityInput.dataset.secretRound = round;
-      quantityInput.dataset.secretField = 'quantity';
-      if (isExtra) {
-        quantityInput.dataset.secretSection = 'extra-assets';
-        quantityInput.dataset.secretEntry = entry.id;
-      } else {
-        quantityInput.dataset.secretSection = 'assets';
-        quantityInput.dataset.secretKey = item.key;
-      }
-      quantityCell.appendChild(quantityInput);
+    if (item.allowQuantity) {
+      quantityCell.innerHTML = `<input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="quantity" value="${values.quantity || 0}">`;
     } else {
       quantityCell.innerHTML = '<span class="placeholder">—</span>';
     }
 
     const measureCell = document.createElement('td');
-    if (isSalary) {
-      const salaryValue = document.createElement('span');
-      salaryValue.className = 'asset-readonly';
-      salaryValue.textContent = values.income ? `₽${formatRub(values.income)}` : '—';
-      measureCell.appendChild(salaryValue);
-    } else if (trackRemaining) {
-      const remainingInput = document.createElement('input');
-      remainingInput.type = 'number';
-      remainingInput.min = '0';
-      remainingInput.step = '1';
-      remainingInput.value = values.remaining || 0;
-      remainingInput.dataset.secretRound = round;
-      remainingInput.dataset.secretField = 'remaining';
-      if (isExtra) {
-        remainingInput.dataset.secretSection = 'extra-assets';
-        remainingInput.dataset.secretEntry = entry.id;
-      } else {
-        remainingInput.dataset.secretSection = 'assets';
-        remainingInput.dataset.secretKey = item.key;
-      }
-      measureCell.appendChild(remainingInput);
-    } else {
-      const incomeInput = document.createElement('input');
-      incomeInput.type = 'number';
-      incomeInput.min = '0';
-      incomeInput.step = '100';
-      incomeInput.value = values.income || 0;
-      incomeInput.dataset.secretRound = round;
-      incomeInput.dataset.secretField = 'income';
-      if (isExtra) {
-        incomeInput.dataset.secretSection = 'extra-assets';
-        incomeInput.dataset.secretEntry = entry.id;
-      } else {
-        incomeInput.dataset.secretSection = 'assets';
-        incomeInput.dataset.secretKey = item.key;
-      }
-      measureCell.appendChild(incomeInput);
-    }
+    const measureWrapper = document.createElement('div');
+    measureWrapper.className = 'asset-field-wrapper';
+    const measureLabel = document.createElement('span');
+    measureLabel.className = 'asset-field-label';
+    measureLabel.textContent = trackRemaining ? 'Остатки' : 'Доход';
+    measureWrapper.appendChild(measureLabel);
+    const measureInput = document.createElement('input');
+    measureInput.type = 'number';
+    measureInput.min = '0';
+    measureInput.step = trackRemaining ? '1' : '100';
+    measureInput.value = trackRemaining ? (values.remaining || 0) : (values.income || 0);
+    measureInput.dataset.secretRound = round;
+    measureInput.dataset.secretSection = 'assets';
+    measureInput.dataset.secretKey = item.key;
+    measureInput.dataset.secretField = trackRemaining ? 'remaining' : 'income';
+    measureWrapper.appendChild(measureInput);
+    measureCell.appendChild(measureWrapper);
 
-    const actionsCell = document.createElement('td');
-    actionsCell.className = 'asset-actions-cell';
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
 
-    if (isSalary) {
+    if (item.category === 'salary') {
       const status = document.createElement('span');
       status.className = 'asset-status salary';
       status.textContent = 'Профессия';
-      actionsCell.appendChild(status);
+      actions.appendChild(status);
       if (Number(values.appliedIncome) > 0) {
         const incomeBadge = document.createElement('span');
         incomeBadge.className = 'asset-income-badge';
         incomeBadge.textContent = `+₽${formatRub(Number(values.appliedIncome) || 0)}`;
-        actionsCell.appendChild(incomeBadge);
+        actions.appendChild(incomeBadge);
       }
     } else {
       const confirmBtn = document.createElement('button');
       confirmBtn.type = 'button';
       confirmBtn.className = values.confirmed ? 'asset-confirm-btn confirmed' : 'asset-confirm-btn';
       confirmBtn.textContent = values.confirmed ? 'Обновить' : 'Подтвердить';
-      confirmBtn.onclick = isExtra ? () => confirmSecretExtraAsset(round, entry.id) : () => confirmSecretAsset(round, item.key);
-      actionsCell.appendChild(confirmBtn);
+      confirmBtn.onclick = () => confirmSecretAsset(round, item.key);
+      actions.appendChild(confirmBtn);
 
       const sellBtn = document.createElement('button');
       sellBtn.type = 'button';
       sellBtn.className = 'asset-sell-btn';
       sellBtn.textContent = 'Продать';
-      sellBtn.onclick = isExtra
-        ? () => secretSellAsset(round, { entryId: entry.id, extra: true, label })
-        : () => secretSellAsset(round, { key: item.key, extra: false, label });
-      actionsCell.appendChild(sellBtn);
+      sellBtn.onclick = () => secretSellAsset(round, { key: item.key, extra: false, label });
+      actions.appendChild(sellBtn);
 
       if (values.confirmed && Number(values.appliedIncome) > 0 && !trackRemaining) {
         const incomeBadge = document.createElement('span');
         incomeBadge.className = 'asset-income-badge';
         incomeBadge.textContent = `+₽${formatRub(Number(values.appliedIncome) || 0)}`;
-        actionsCell.appendChild(incomeBadge);
+        actions.appendChild(incomeBadge);
       }
     }
 
+    measureCell.appendChild(actions);
+
     row.appendChild(labelCell);
+    row.appendChild(nameCell);
     row.appendChild(priceCell);
     row.appendChild(quantityCell);
     row.appendChild(measureCell);
-    row.appendChild(actionsCell);
-    container.appendChild(row);
-  };
-
-  rows.forEach(item => {
-    const allowQuantity = item.allowQuantity !== false;
-    const defaults = {
-      name: '',
-      price: 0,
-      quantity: allowQuantity ? 0 : 1,
-      income: 0,
-      confirmed: false,
-      appliedIncome: 0,
-      remaining: 0,
-      trackRemaining: !!item.trackRemaining
-    };
-    const stored = sheet.assets[item.key] || {};
-    const values = { ...defaults, ...stored };
-    values.trackRemaining = !!(item.trackRemaining || values.trackRemaining);
-    const target = item.category === 'inventory' ? inventoryBody : mainBody;
-    appendRow(target, { type: 'base', item, values });
+    body.appendChild(row);
   });
 
   (sheet.extraAssets || []).forEach(entry => {
-    const values = {
-      name: entry.name || '',
-      price: Number(entry.price) || 0,
-      quantity: entry.allowQuantity === false ? 1 : (Number(entry.quantity) || 0),
-      income: Number(entry.income) || 0,
-      confirmed: !!entry.confirmed,
-      appliedIncome: Number(entry.appliedIncome) || 0,
-      remaining: Number(entry.remaining) || 0
-    };
-    const target = entry.category === 'inventory' ? inventoryBody : mainBody;
-    appendRow(target, { type: 'extra', entry, values });
-  });
-
-  if (inventoryBody) {
-    const card = document.getElementById(`secretRound${round}InventoryCard`);
-    if (card) {
-      card.style.display = inventoryBody.children.length ? '' : 'none';
+    const row = document.createElement('tr');
+    row.className = 'secret-asset-row extra';
+    const family = getSecretAssetFamily(entry.category || 'other');
+    row.dataset.category = entry.category || 'other';
+    row.dataset.family = family;
+    const familyStyle = SECRET_ASSET_FAMILY_STYLES[family];
+    if (familyStyle) {
+      row.style.setProperty('--row-accent', familyStyle.accent);
+      row.style.setProperty('--row-fill', familyStyle.fill);
     }
-  }
+    if (entry.confirmed) {
+      row.classList.add('confirmed');
+    }
+
+    const trackRemaining = !!entry.trackRemaining;
+
+    const labelCell = document.createElement('th');
+    labelCell.textContent = entry.label || 'Дополнительный актив';
+
+    const nameCell = document.createElement('td');
+    const nameWrapper = document.createElement('div');
+    nameWrapper.className = 'asset-name-wrapper';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = entry.name || '';
+    nameInput.dataset.secretRound = round;
+    nameInput.dataset.secretSection = 'extra-assets';
+    nameInput.dataset.secretEntry = entry.id;
+    nameInput.dataset.secretField = 'name';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'icon-btn';
+    removeBtn.innerHTML = '<span aria-hidden="true">×</span>';
+    removeBtn.title = 'Удалить колонку';
+    removeBtn.onclick = () => removeSecretAssetRow(round, entry.id);
+    nameWrapper.appendChild(nameInput);
+    nameWrapper.appendChild(removeBtn);
+    nameCell.appendChild(nameWrapper);
+
+    const priceCell = document.createElement('td');
+    priceCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="price" value="${entry.price || 0}">`;
+
+    const quantityCell = document.createElement('td');
+    const allowQuantity = entry.allowQuantity === false ? false : true;
+    if (allowQuantity) {
+      quantityCell.innerHTML = `<input type="number" min="0" step="1" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="quantity" value="${entry.quantity || 0}">`;
+    } else {
+      quantityCell.innerHTML = '<span class="placeholder">—</span>';
+    }
+
+    const measureCell = document.createElement('td');
+    const measureWrapper = document.createElement('div');
+    measureWrapper.className = 'asset-field-wrapper';
+    const measureLabel = document.createElement('span');
+    measureLabel.className = 'asset-field-label';
+    measureLabel.textContent = trackRemaining ? 'Остатки' : 'Доход';
+    measureWrapper.appendChild(measureLabel);
+    const measureInput = document.createElement('input');
+    measureInput.type = 'number';
+    measureInput.min = '0';
+    measureInput.step = trackRemaining ? '1' : '100';
+    measureInput.value = trackRemaining ? (entry.remaining || 0) : (entry.income || 0);
+    measureInput.dataset.secretRound = round;
+    measureInput.dataset.secretSection = 'extra-assets';
+    measureInput.dataset.secretEntry = entry.id;
+    measureInput.dataset.secretField = trackRemaining ? 'remaining' : 'income';
+    measureWrapper.appendChild(measureInput);
+    measureCell.appendChild(measureWrapper);
+
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = entry.confirmed ? 'asset-confirm-btn confirmed' : 'asset-confirm-btn';
+    confirmBtn.textContent = entry.confirmed ? 'Обновить' : 'Подтвердить';
+    confirmBtn.onclick = () => confirmSecretExtraAsset(round, entry.id);
+    actions.appendChild(confirmBtn);
+
+    const sellBtn = document.createElement('button');
+    sellBtn.type = 'button';
+    sellBtn.className = 'asset-sell-btn';
+    sellBtn.textContent = 'Продать';
+    sellBtn.onclick = () => secretSellAsset(round, { entryId: entry.id, extra: true, label });
+    actions.appendChild(sellBtn);
+
+    if (entry.confirmed && Number(entry.appliedIncome) > 0 && !trackRemaining) {
+      const incomeBadge = document.createElement('span');
+      incomeBadge.className = 'asset-income-badge';
+      incomeBadge.textContent = `+₽${formatRub(Number(entry.appliedIncome) || 0)}`;
+      actions.appendChild(incomeBadge);
+    }
+
+    measureCell.appendChild(actions);
+
+    row.appendChild(labelCell);
+    row.appendChild(nameCell);
+    row.appendChild(priceCell);
+    row.appendChild(quantityCell);
+    row.appendChild(measureCell);
+    body.appendChild(row);
+  });
 }
 
 function confirmSecretAsset(round, key) {
@@ -4189,250 +4180,8 @@ function resetSecretExtraAsset(round, entryId) {
 }
 
 function secretSellAsset(round, payload = {}) {
-  const sheet = ensureSecretSheet(round);
-  if (!sheet) return;
-
-  if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
-    showModal('Продажа актива', 'Продажа доступна только в браузере.');
-    return;
-  }
-
-  const isExtra = !!payload.extra;
-  let asset;
-  let label;
-  let category;
-  let allowQuantity = true;
-  let quantity = 1;
-  let price = 0;
-  let trackRemaining = false;
-  let meta = null;
-
-  if (isExtra) {
-    asset = (sheet.extraAssets || []).find(entry => entry.id === payload.entryId);
-    if (!asset) {
-      showModal('Продажа актива', 'Не удалось найти актив для продажи.');
-      return;
-    }
-    label = payload.label || asset.label || 'Актив';
-    category = asset.category || 'other';
-    allowQuantity = asset.allowQuantity === false ? false : true;
-    quantity = allowQuantity ? Math.max(0, Number(asset.quantity) || 0) : 1;
-    price = Number(asset.price) || 0;
-    trackRemaining = !!asset.trackRemaining;
-  } else {
-    meta = getSecretAssetDefinition(round, payload.key);
-    asset = sheet.assets[payload.key];
-    if (!asset) {
-      showModal('Продажа актива', 'Не удалось найти актив для продажи.');
-      return;
-    }
-    label = payload.label || meta?.label || asset.label || 'Актив';
-    category = asset.category || meta?.category || 'other';
-    allowQuantity = meta ? meta.allowQuantity !== false : asset.allowQuantity !== false;
-    quantity = allowQuantity ? Math.max(0, Number(asset.quantity) || 0) : 1;
-    price = Number(asset.price) || 0;
-    trackRemaining = !!asset.trackRemaining;
-  }
-
-  if (!asset.confirmed) {
-    showModal('Продажа актива', 'Сначала подтвердите актив перед продажей.');
-    return;
-  }
-
-  const baseTotal = allowQuantity ? price * (quantity || 0) : price;
-
-  const promptAmount = (message, defaultValue = '') => {
-    const raw = window.prompt(message, defaultValue ? String(defaultValue) : '');
-    if (raw === null) {
-      return null;
-    }
-    const normalized = raw.replace(/\s+/g, '').replace(',', '.');
-    const value = Number(normalized);
-    if (!Number.isFinite(value) || value <= 0) {
-      showModal('Продажа актива', 'Введите корректную сумму.');
-      return null;
-    }
-    return value;
-  };
-
-  const promptPercent = message => {
-    const raw = window.prompt(message, '0');
-    if (raw === null) {
-      return null;
-    }
-    const value = Number(raw.replace(',', '.'));
-    if (!Number.isFinite(value)) {
-      showModal('Продажа актива', 'Введите корректное значение процента.');
-      return null;
-    }
-    return value;
-  };
-
-  const promptTurns = message => {
-    const raw = window.prompt(message, '');
-    if (raw === null) {
-      return null;
-    }
-    const value = Number(raw.replace(',', '.'));
-    if (!Number.isFinite(value) || value <= 0) {
-      showModal('Продажа актива', 'Введите корректное количество ходов.');
-      return null;
-    }
-    return Math.round(value);
-  };
-
-  let saleAmount = 0;
-  let note = '';
-
-  switch (category) {
-    case 'realEstate': {
-      if (baseTotal <= 0) {
-        showModal('Продажа недвижимости', 'Укажите стоимость недвижимости перед продажей.');
-        return;
-      }
-      const marketPercent = promptPercent('На сколько процентов изменилась цена недвижимости на рынке сегодня?');
-      if (marketPercent === null) return;
-      saleAmount = baseTotal * (1 + marketPercent / 100);
-      note = `Продажа недвижимости (${marketPercent >= 0 ? '+' : ''}${marketPercent}%)`;
-      break;
-    }
-    case 'construction': {
-      if (baseTotal <= 0) {
-        showModal('Продажа строительства', 'Укажите стоимость строительства перед продажей.');
-        return;
-      }
-      const buildPercent = promptPercent('На сколько процентов выросла стоимость после строительства?');
-      if (buildPercent === null) return;
-      const marketPercent = promptPercent('На сколько процентов изменилась цена на рынке сегодня?');
-      if (marketPercent === null) return;
-      saleAmount = baseTotal * (1 + buildPercent / 100) * (1 + marketPercent / 100);
-      note = `Продажа строительства (${buildPercent >= 0 ? '+' : ''}${buildPercent}% / ${marketPercent >= 0 ? '+' : ''}${marketPercent}%)`;
-      break;
-    }
-    case 'land': {
-      const amount = promptAmount('Введите сумму продажи земельного участка', baseTotal || '');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = 'Продажа земельного участка';
-      break;
-    }
-    case 'securities': {
-      if (quantity <= 0) {
-        showModal('Продажа актива', 'Укажите количество бумаг перед продажей.');
-        return;
-      }
-      const unitPrice = promptAmount('Введите цену продажи за одну ценную бумагу');
-      if (unitPrice === null) return;
-      saleAmount = unitPrice * quantity;
-      note = 'Продажа ценных бумаг';
-      break;
-    }
-    case 'funds': {
-      if (quantity <= 0) {
-        showModal('Продажа актива', 'Укажите количество паёв перед продажей.');
-        return;
-      }
-      const fundPrice = promptAmount('Введите цену продажи одного пая');
-      if (fundPrice === null) return;
-      saleAmount = fundPrice * quantity;
-      note = 'Продажа паевых фондов';
-      break;
-    }
-    case 'business': {
-      const amount = promptAmount('Введите сумму продажи доли в бизнесе', baseTotal || '');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = 'Продажа доли в бизнесе';
-      break;
-    }
-    case 'inventory': {
-      const amount = promptAmount('Введите сумму продажи товара');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = 'Продажа товара';
-      break;
-    }
-    case 'deposits': {
-      if (baseTotal <= 0) {
-        showModal('Закрытие вклада', 'Укажите сумму вклада перед закрытием.');
-        return;
-      }
-      const rate = promptPercent('Под какой процент размещался вклад?');
-      if (rate === null) return;
-      const turns = promptTurns('Сколько ходов длился вклад?');
-      if (turns === null) return;
-      saleAmount = baseTotal * (1 + rate / 100);
-      note = `Закрытие вклада (${turns} ход${turns % 10 === 1 && turns % 100 !== 11 ? '' : turns % 10 >= 2 && turns % 10 <= 4 && (turns % 100 < 10 || turns % 100 >= 20) ? 'а' : 'ов'})`;
-      break;
-    }
-    case 'privateLoans': {
-      const amount = promptAmount('Введите сумму возврата по частному займу', baseTotal || '');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = 'Возврат частного займа';
-      break;
-    }
-    case 'gold': {
-      const amount = promptAmount('Введите сумму продажи золотых изделий', baseTotal || '');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = 'Продажа золотых изделий';
-      break;
-    }
-    default: {
-      const amount = promptAmount('Введите сумму продажи актива', baseTotal || '');
-      if (amount === null) return;
-      saleAmount = amount;
-      note = `Продажа актива «${label}»`;
-      break;
-    }
-  }
-
-  if (!Number.isFinite(saleAmount) || saleAmount <= 0) {
-    showModal('Продажа актива', 'Сумма продажи должна быть больше нуля.');
-    return;
-  }
-
-  const summary = [`Актив: ${label}`, `Сумма продажи: ₽${formatRub(saleAmount)}`];
-  if (note && !note.toLowerCase().startsWith('продажа актива')) {
-    summary.push(note);
-  }
-  summary.push('', 'Провести продажу?');
-  if (typeof window.confirm === 'function' && !window.confirm(summary.join('\n'))) {
-    return;
-  }
-
-  asset.price = 0;
-  asset.income = 0;
-  asset.confirmed = false;
-  asset.appliedIncome = 0;
-  asset.trackRemaining = trackRemaining;
-  asset.remaining = 0;
-  if (allowQuantity) {
-    asset.quantity = 0;
-  } else {
-    asset.quantity = 1;
-  }
-  if (asset.name) {
-    asset.name = '';
-  }
-
-  if (!isExtra && payload.key) {
-    sheet.assets[payload.key] = asset;
-  }
-
-  gameData.secretData.sheets[round] = sheet;
-  updateSecretSheetTotals(round);
-  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
-
-  applySecretLedgerEntry(round, {
-    type: saleAmount >= 0 ? 'income' : 'expense',
-    amount: Math.abs(saleAmount),
-    note: note || `Продажа актива «${label}»`
-  });
-
-  checkSecretUnlocks();
-  showModal('Продажа завершена', `${label} продан за ₽${formatRub(saleAmount)}. Средства добавлены в кошелёк.`);
+  const label = payload.label || 'актив';
+  showModal('Продажа актива', `Функция продажи ${label} будет доступна после уточнения правил. Пока можете обновить данные вручную.`);
 }
 
 function renderSecretPassivesTable(round, sheet, config) {
@@ -4815,15 +4564,10 @@ function secretLedgerApply(round, type) {
     return;
   }
 
-  const notePrompt = window.prompt(`${title}\nКомментарий`, '');
-  if (notePrompt === null) {
-    return;
-  }
-
-  const note = notePrompt.trim();
-  if (!note) {
-    showModal('Учётная книга', 'Добавьте комментарий к записи.');
-    return;
+  let note = '';
+  const notePrompt = window.prompt(`${title}\nКомментарий (необязательно)`, '');
+  if (notePrompt !== null) {
+    note = notePrompt.trim();
   }
 
   applySecretLedgerEntry(round, {
@@ -4831,20 +4575,6 @@ function secretLedgerApply(round, type) {
     amount,
     note
   });
-}
-
-function secretTriggerWalletAction(action) {
-  const secret = ensureSecretState(gameData.secretData);
-  const activeRound = secret.round || 1;
-
-  if (action === 'salary') {
-    secretLedgerPaySalary(activeRound);
-    return;
-  }
-
-  if (action === 'income' || action === 'expense') {
-    secretLedgerApply(activeRound, action);
-  }
 }
 
 function applySecretLedgerEntry(round, entry) {
@@ -5274,7 +5004,7 @@ function celebrateSecretVictory() {
     gameData.secretData = latest;
     updateSecretGoalsUI();
     saveGameData();
-  }, 3000);
+  }, 5000);
 
   showModal('Поздравляем!', 'Обе цели выполнены! Насладитесь моментом и подготовьтесь к финальному отчету.');
   updateSecretGoalsUI();
@@ -5329,6 +5059,8 @@ function setSecretRound(round, options = {}) {
   if (!options.silent) {
     saveGameData();
   }
+
+  return null;
 }
 
 function syncSecretInfoFields() {
@@ -5367,7 +5099,6 @@ function syncSecretInfoFields() {
   if (headerProfession) {
     headerProfession.textContent = profession || '—';
   }
-  return '';
 }
 
 function handleSecretFieldInput(event) {
@@ -5524,6 +5255,30 @@ function handleSecretFieldInput(event) {
   }
 
   updateSecretSheetTotals(round);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+}
+
+function secretApplyWalletChange(type) {
+  const input = document.getElementById('secretWalletAdjustment');
+  if (!input) return;
+
+  const amount = Number(input.value);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму');
+    return;
+  }
+
+  if (type === 'add') {
+    gameData.wallet += amount;
+    showModal('Пополнение кошелька', `Вы добавили ₽${formatRub(amount)}`);
+  } else {
+    gameData.wallet -= amount;
+    showModal('Списание средств', `Вы списали ₽${formatRub(amount)}`);
+  }
+
+  input.value = '';
   updateSecretSummary();
   checkSecretUnlocks();
   saveGameData();
