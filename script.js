@@ -1072,10 +1072,18 @@ function selectProfession(index, type) {
     initializeCashFlowGame();
     navigateToScreen(6);
   } else {
-    selectedProfession = secretOfMoneyProfessions[index];
+    selectedProfession = { ...secretOfMoneyProfessions[index] };
     gameType = 'secret';
-    initializeSecretGame();
-    navigateToScreen(7);
+    const initialized = initializeSecretGame();
+    if (initialized) {
+      navigateToScreen(7);
+    } else {
+      showModal(
+        'Не удалось открыть «Секрет денег»',
+        'Возникла ошибка при подготовке бланка. Попробуйте снова выбрать профессию '
+          + 'или обновите страницу.'
+      );
+    }
   }
 }
 
@@ -2377,12 +2385,438 @@ function addExpense() {
     return;
   }
 
-  const index = gameData.additionalExpenses.findIndex(expense => expense.id === id);
-  if (index === -1) {
+  cashFlowStage = stage;
+
+  const stage1Form = document.getElementById('stage1Form');
+  const stage2Form = document.getElementById('stage2Form');
+  if (stage1Form) {
+    stage1Form.classList.toggle('active', stage === 1);
+  }
+  if (stage2Form) {
+    stage2Form.classList.toggle('active', stage === 2);
+  }
+
+  updateCashFlowDisplay();
+  updateStageButtons();
+}
+
+function updateStageButtons() {
+  const stage1Button = document.getElementById('stage1Button');
+  const stage2Button = document.getElementById('stage2Button');
+
+  if (stage1Button) {
+    stage1Button.classList.toggle('active', cashFlowStage === 1);
+  }
+
+  if (stage2Button) {
+    stage2Button.disabled = !stageTwoUnlocked;
+    stage2Button.classList.toggle('active', cashFlowStage === 2);
+  }
+
+  const stageLabel = document.getElementById('cashflowStageLabel');
+  if (stageLabel) {
+    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиные гонки' : 'Этап 2: Быстрый трек';
+  }
+}
+
+function updateStage2Display() {
+  const stageState = ensureStageTwoState();
+  stageTwoReportUnlocked = !!stageState.reportUnlocked;
+  stageTwoVictoryCelebrated = !!stageState.victoryCelebrated;
+
+  const baseElement = document.getElementById('stage2BasePassive');
+  if (baseElement) {
+    baseElement.textContent = stageTwoBasePassive.toLocaleString();
+  }
+
+  const walletElement = document.getElementById('stage2WalletAmount');
+  if (walletElement) {
+    walletElement.textContent = gameData.wallet.toLocaleString();
+  }
+
+  if (!stageTwoUnlocked) {
+    const passiveElement = document.getElementById('stage2PassiveIncome');
+    if (passiveElement) {
+      passiveElement.textContent = '0';
+    }
+    const totalElement = document.getElementById('stage2TotalPassive');
+    if (totalElement) {
+      totalElement.textContent = '0';
+    }
+    const salaryButton = document.getElementById('stage2SalaryButton');
+    if (salaryButton) {
+      salaryButton.textContent = 'Зарплата';
+    }
+    const expenseButton = document.getElementById('stage2ExpenseButton');
+    if (expenseButton) {
+      expenseButton.textContent = 'Расход';
+    }
+    updateStageGoalStatus();
     return;
   }
 
-  const [removed] = gameData.additionalExpenses.splice(index, 1);
+  recalculateStageTwoAdditionalPassive();
+
+  const fastTrackPassive = stageTwoInitialPassive;
+  const totalPassive = getStageTwoPassiveIncome();
+
+  const passiveIncomeElement = document.getElementById('stage2PassiveIncome');
+  if (passiveIncomeElement) {
+    passiveIncomeElement.textContent = fastTrackPassive.toLocaleString();
+  }
+
+  const totalPassiveElement = document.getElementById('stage2TotalPassive');
+  if (totalPassiveElement) {
+    totalPassiveElement.textContent = totalPassive.toLocaleString();
+  }
+
+  const targetElement = document.getElementById('stage2TargetIncome');
+  if (targetElement) {
+    targetElement.textContent = STAGE_TWO_TARGET_INCREMENT.toLocaleString();
+  }
+
+  const salaryButton = document.getElementById('stage2SalaryButton');
+  if (salaryButton) {
+    salaryButton.textContent = `Зарплата +$${totalPassive.toLocaleString()}`;
+  }
+
+  const expenseButton = document.getElementById('stage2ExpenseButton');
+  if (expenseButton) {
+    expenseButton.textContent = 'Расход';
+  }
+
+  renderStageTwoReport();
+  updateStageGoalStatus();
+}
+
+function getStageTwoPassiveIncome() {
+  return stageTwoInitialPassive + stageTwoAdditionalPassive;
+}
+
+function addStageTwoPassiveIncome() {
+  if (!stageTwoUnlocked) {
+    showModal('Этап 2 недоступен', 'Сначала завершите цели первого этапа.');
+    return;
+  }
+
+  const input = document.getElementById('stage2PassiveInput');
+  const amount = parseFloat(input?.value);
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму пассивного дохода.');
+    return;
+  }
+
+  stageTwoManualPassive += amount;
+  recalculateStageTwoAdditionalPassive();
+  persistStageTwoState();
+  if (input) {
+    input.value = '';
+  }
+
+  updateStage2Display();
+
+  showModal('Пассивный доход добавлен', `+$${amount.toLocaleString()}`);
+}
+
+function updateStageGoalStatus() {
+  const increaseElement = document.getElementById('stage2IncreaseAmount');
+  const targetElement = document.getElementById('stage2TargetIncome');
+  const passiveButton = document.getElementById('passiveGoalButton');
+  const passiveCard = document.getElementById('passiveGoalCard');
+  const dreamButton = document.getElementById('dreamGoalButton');
+  const dreamCard = document.getElementById('dreamGoalCard');
+  const dreamDisplay = document.getElementById('stage2DreamDisplay');
+
+  const increase = Math.max(0, getStageTwoPassiveIncome() - stageTwoInitialPassive);
+
+  if (increaseElement) {
+    increaseElement.textContent = increase.toLocaleString();
+  }
+
+  if (targetElement) {
+    targetElement.textContent = STAGE_TWO_TARGET_INCREMENT.toLocaleString();
+  }
+
+  const passiveReady = stageTwoUnlocked && !stageTwoPassiveGoalClaimed && increase >= STAGE_TWO_TARGET_INCREMENT;
+  if (passiveButton) {
+    passiveButton.disabled = !passiveReady;
+  }
+  if (passiveCard) {
+    passiveCard.classList.toggle('ready', passiveReady);
+    passiveCard.classList.toggle('completed', stageTwoPassiveGoalClaimed);
+  }
+
+  const dreamValue = dreamDisplay ? dreamDisplay.textContent : '—';
+  const dreamReady = stageTwoUnlocked && !stageTwoDreamGoalClaimed && dreamValue && dreamValue !== '—';
+  if (dreamButton) {
+    dreamButton.disabled = !dreamReady;
+  }
+  if (dreamCard) {
+    dreamCard.classList.toggle('ready', dreamReady);
+    dreamCard.classList.toggle('completed', stageTwoDreamGoalClaimed);
+  }
+
+  handleGoalMilestones();
+}
+
+function handleGoalMilestones() {
+  const notice = document.getElementById('stage2GoalNotice');
+  const noticeMessage = document.getElementById('stage2GoalNoticeMessage');
+  const victory = document.getElementById('stage2VictoryBanner');
+  const reportButton = document.getElementById('stage2ReportButton');
+
+  if (!notice || !victory || !reportButton) {
+    return;
+  }
+
+  if (!stageTwoUnlocked) {
+    notice.classList.remove('active');
+    victory.classList.remove('active');
+    reportButton.classList.remove('visible');
+    reportButton.disabled = true;
+    stageTwoReportUnlocked = false;
+    stageTwoVictoryCelebrated = false;
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+    persistStageTwoState();
+    return;
+  }
+
+  const completedPassive = stageTwoPassiveGoalClaimed;
+  const completedDream = stageTwoDreamGoalClaimed;
+  const completedCount = (completedPassive ? 1 : 0) + (completedDream ? 1 : 0);
+
+  if (completedCount === 1) {
+    notice.classList.add('active');
+    if (noticeMessage) {
+      noticeMessage.textContent = completedPassive
+        ? 'Осталось подтвердить мечту, чтобы завершить игру.'
+        : 'Увеличьте пассивный доход минимум на $50 000, чтобы завершить игру.';
+    }
+  } else {
+    notice.classList.remove('active');
+  }
+
+  if (completedCount === 2) {
+    victory.classList.add('active');
+    if (!stageTwoVictoryCelebrated) {
+      stageTwoVictoryCelebrated = true;
+      victory.classList.add('celebrate');
+      setTimeout(() => victory.classList.remove('celebrate'), 2500);
+    }
+
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+
+    if (!stageTwoReportUnlocked) {
+      reportButton.classList.remove('visible');
+      reportButton.disabled = true;
+      stageTwoReportTimer = setTimeout(() => {
+        stageTwoReportUnlocked = true;
+        reportButton.classList.add('visible');
+        reportButton.disabled = false;
+        persistStageTwoState();
+      }, 5000);
+    } else {
+      reportButton.classList.add('visible');
+      reportButton.disabled = false;
+    }
+  } else {
+    victory.classList.remove('active');
+    reportButton.classList.remove('visible');
+    reportButton.disabled = true;
+    stageTwoReportUnlocked = false;
+    stageTwoVictoryCelebrated = false;
+    if (stageTwoReportTimer) {
+      clearTimeout(stageTwoReportTimer);
+      stageTwoReportTimer = null;
+    }
+  }
+
+  persistStageTwoState();
+}
+
+function recalculateStageTwoAdditionalPassive() {
+  const businessPassive = stageTwoBusinesses.reduce((sum, business) => sum + business.income, 0);
+  stageTwoAdditionalPassive = stageTwoManualPassive + businessPassive;
+}
+
+function persistStageTwoState() {
+  const state = ensureStageTwoState();
+  state.manualPassive = stageTwoManualPassive;
+  state.businesses = stageTwoBusinesses.map(business => ({ ...business }));
+  state.passiveGoalClaimed = stageTwoPassiveGoalClaimed;
+  state.dreamGoalClaimed = stageTwoDreamGoalClaimed;
+  state.reportUnlocked = stageTwoReportUnlocked;
+  state.victoryCelebrated = stageTwoVictoryCelebrated;
+}
+
+function renderStageTwoReport() {
+  const tableBody = document.getElementById('stage2ReportBody');
+  if (!tableBody) return;
+
+  tableBody.innerHTML = '';
+
+  let runningTotal = stageTwoInitialPassive;
+
+  stageTwoBusinesses.forEach((business, index) => {
+    runningTotal += business.income;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${business.name}</td>
+      <td>$${business.income.toLocaleString()}</td>
+      <td>$${runningTotal.toLocaleString()}</td>
+      <td><button class="outline" onclick="removeStageTwoBusiness(${index})">Удалить</button></td>
+    `;
+    tableBody.appendChild(row);
+  });
+
+  const newRow = document.createElement('tr');
+  newRow.className = 'new-asset-row';
+  newRow.innerHTML = `
+    <td><input type="text" placeholder="Название бизнеса"></td>
+    <td><input type="number" min="0" placeholder="Доход в месяц"></td>
+    <td colspan="2"><button class="buy-btn">Добавить</button></td>
+  `;
+  newRow.querySelector('button').onclick = () => addStageTwoBusiness(newRow);
+  tableBody.appendChild(newRow);
+}
+
+function addStageTwoBusiness(row) {
+  const inputs = row.querySelectorAll('input');
+  const name = inputs[0].value.trim();
+  const income = parseFloat(inputs[1].value);
+
+  if (!name || !income || income <= 0) {
+    showModal('Ошибка', 'Введите название бизнеса и его доход.');
+    return;
+  }
+
+  const summary = [`Название: ${name}`, `Доход: $${income.toLocaleString()} / месяц`, '', 'Подтвердить добавление бизнеса?'].join('\n');
+
+  if (!confirm(summary)) {
+    return;
+  }
+
+  stageTwoBusinesses.push({ name, income });
+  inputs.forEach(input => (input.value = ''));
+  recalculateStageTwoAdditionalPassive();
+  persistStageTwoState();
+  updateStage2Display();
+  showModal('Бизнес добавлен', `${name}: +$${income.toLocaleString()} к пассивному доходу быстрого трека.`);
+}
+
+function removeStageTwoBusiness(index) {
+  const [removed] = stageTwoBusinesses.splice(index, 1);
+  if (!removed) return;
+
+  recalculateStageTwoAdditionalPassive();
+  persistStageTwoState();
+  updateStage2Display();
+  showModal('Запись удалена', `${removed.name} убран из финансового отчета.`);
+}
+
+function confirmPassiveGoal() {
+  if (!stageTwoUnlocked || stageTwoPassiveGoalClaimed) {
+    return;
+  }
+
+  const increase = Math.max(0, getStageTwoPassiveIncome() - stageTwoInitialPassive);
+  if (increase < STAGE_TWO_TARGET_INCREMENT) {
+    showModal('Еще рано', 'Увеличьте пассивный доход минимум на $50 000, чтобы подтвердить цель.');
+    return;
+  }
+
+  if (!confirm('Подтвердить достижение цели по увеличению пассивного дохода?')) {
+    return;
+  }
+
+  stageTwoPassiveGoalClaimed = true;
+  persistStageTwoState();
+  const card = document.getElementById('passiveGoalCard');
+  if (card) {
+    card.classList.add('celebrate');
+    setTimeout(() => card.classList.remove('celebrate'), 2000);
+  }
+  updateStageGoalStatus();
+  showModal('Цель достигнута', 'Пассивный доход увеличен на $50 000 и более!');
+}
+
+function confirmDreamGoal() {
+  if (!stageTwoUnlocked || stageTwoDreamGoalClaimed) {
+    return;
+  }
+
+  const dreamDisplay = document.getElementById('stage2DreamDisplay');
+  const dreamValue = dreamDisplay ? dreamDisplay.textContent : '—';
+
+  if (!dreamValue || dreamValue === '—') {
+    showModal('Мечта не указана', 'Введите мечту на первом этапе, чтобы подтвердить ее покупку.');
+    return;
+  }
+
+  if (!confirm(`Подтвердить покупку мечты: "${dreamValue}"?`)) {
+    return;
+  }
+
+  stageTwoDreamGoalClaimed = true;
+  dreamPurchased = true;
+  persistStageTwoState();
+  const card = document.getElementById('dreamGoalCard');
+  if (card) {
+    card.classList.add('celebrate');
+    setTimeout(() => card.classList.remove('celebrate'), 2000);
+  }
+  updateStageGoalStatus();
+  showModal('Мечта исполнена', `Поздравляем! Мечта "${dreamValue}" куплена.`);
+}
+
+function collectFastTrackSalary() {
+  if (!stageTwoUnlocked) {
+    showModal('Этап 2 недоступен', 'Сначала выполните условия быстрого трека.');
+    return;
+  }
+
+  const amount = getStageTwoPassiveIncome();
+  if (amount <= 0) {
+    showModal('Нет дохода', 'Пассивный доход быстрого трека пока равен нулю.');
+    return;
+  }
+
+  gameData.wallet += amount;
+  updateCashFlowDisplay();
+  showModal('Зарплата получена', `+$${amount.toLocaleString()}`);
+}
+
+function recordFastTrackExpense() {
+  if (!stageTwoUnlocked) {
+    showModal('Этап 2 недоступен', 'Сначала выполните условия быстрого трека.');
+    return;
+  }
+
+  const suggestion = getStageTwoPassiveIncome();
+  const input = prompt('Введите сумму расхода быстрого трека', suggestion);
+  if (input === null) {
+    return;
+  }
+
+  const amount = parseFloat(input);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму расхода.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств в кошельке.');
+    return;
+  }
+
+  gameData.wallet -= amount;
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -3107,36 +3541,62 @@ function closeFinalReport() {
 // === СЕКРЕТ ДЕНЕГ ИГРА ===
 
 function initializeSecretGame() {
-  if (!selectedProfession) return;
+  if (!selectedProfession) return false;
 
   if (secretVictoryTimer) {
     clearTimeout(secretVictoryTimer);
     secretVictoryTimer = null;
   }
 
-  gameData.secretData = ensureSecretState(createEmptySecretState());
-  gameData.secretData.round = 1;
-  gameData.secretData.unlockedRounds = [1];
-  gameData.secretData.passiveIncome = 0;
-  gameData.secretData.warehouseFeeDeducted = false;
-  gameData.secretData.goals = createDefaultSecretGoals();
-  gameData.secretData.playerInfo.dreamConfirmed = false;
+  const assignFreshSecretState = () => {
+    const freshState = createEmptySecretState();
+    freshState.playerInfo.profession = selectedProfession ? selectedProfession.name : '';
+    if (currentUser && currentUser.nickname) {
+      freshState.playerInfo.player = currentUser.nickname;
+    }
+    gameData.secretData = ensureSecretState(freshState);
+    gameData.secretData.round = 1;
+    gameData.secretData.unlockedRounds = [1];
+    gameData.secretData.passiveIncome = 0;
+    gameData.secretData.warehouseFeeDeducted = false;
+    gameData.secretData.goals = createDefaultSecretGoals();
+    gameData.secretData.playerInfo.dreamConfirmed = false;
+    gameData.wallet = Number(selectedProfession.savings) || 0;
+  };
 
-  gameData.wallet = Number(selectedProfession.savings) || 0;
-  gameData.secretData.playerInfo.profession = selectedProfession.name;
-  if (!gameData.secretData.playerInfo.player && currentUser && currentUser.nickname) {
-    gameData.secretData.playerInfo.player = currentUser.nickname;
+  const finalizeInitialization = () => {
+    ensureSecretBaseSheets();
+    applySecretProfessionDefaults();
+    renderSecretSheets();
+    syncSecretInfoFields();
+    renderSecretRoundTabs();
+    setSecretRound(1, { silent: true });
+    updateSecretSummary();
+    checkSecretUnlocks();
+    saveGameData();
+  };
+
+  assignFreshSecretState();
+
+  try {
+    finalizeInitialization();
+    return true;
+  } catch (error) {
+    console.error('Не удалось инициализировать «Секрет денег» с сохранёнными данными:', error);
+    showModal(
+      'Данные «Секрет денег» сброшены',
+      'При восстановлении прежнего листа возникла ошибка, поэтому бланк был создан заново.'
+    );
+
+    try {
+      assignFreshSecretState();
+      finalizeInitialization();
+      return true;
+    } catch (fallbackError) {
+      console.error('Повторная инициализация «Секрет денег» завершилась ошибкой:', fallbackError);
+      return false;
+    }
   }
-
-  ensureSecretBaseSheets();
-  applySecretProfessionDefaults();
-  renderSecretSheets();
-  syncSecretInfoFields();
-  renderSecretRoundTabs();
-  setSecretRound(1, { silent: true });
-  updateSecretSummary();
-  checkSecretUnlocks();
-  saveGameData();
 }
 
 function applySecretProfessionDefaults() {
@@ -4906,9 +5366,6 @@ function syncSecretInfoFields() {
   const headerProfession = document.getElementById('secretProfessionName');
   if (headerProfession) {
     headerProfession.textContent = profession || '—';
-  }
-  if (round === 3) {
-    return 'Пассивный доход достиг ₽300 000. Добро пожаловать в круг олигархов! Планируйте крупные активы и шаги к мечте.';
   }
   return '';
 }
