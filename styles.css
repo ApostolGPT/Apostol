@@ -1095,7 +1095,103 @@ body {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
-  color: var(--primary-color);
+}
+
+.ledger-controls .expense-btn {
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.ledger-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ledger-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(226, 232, 240, 0.4);
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.ledger-item.expense {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.ledger-item.salary {
+  background: rgba(56, 189, 248, 0.2);
+  color: #0369a1;
+}
+
+@media (max-width: 1024px) {
+  .secret-money-game {
+    padding: 24px;
+  }
+
+  .secret-header {
+    align-items: flex-start;
+  }
+
+  .secret-title {
+    text-align: left;
+  }
+
+  .profession-chip {
+    align-items: flex-start;
+  }
+
+  .secret-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .secret-money-game {
+    padding: 20px;
+  }
+
+  .secret-title h1 {
+    font-size: 1.8rem;
+  }
+
+  .secret-sheet-header {
+    flex-direction: column;
+  }
+
+  .sheet-code {
+    width: 72px;
+    height: 72px;
+    font-size: 1.2rem;
+  }
+
+  .secret-totals-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .round-tab {
+    font-size: 0.95rem;
+  }
+
+  .overview-card {
+    padding: 18px;
+  }
+
+  .secret-sheet {
+    padding: 20px;
+  }
 }
 
 .loan-details {
@@ -2371,6 +2467,83 @@ body {
   color: #0f172a;
 }
 
+.secret-asset-row.confirmed th,
+.secret-asset-row.confirmed td {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.asset-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.asset-confirm-btn,
+.asset-reset-btn {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.asset-confirm-btn {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: rgba(191, 219, 254, 0.4);
+  color: #1d4ed8;
+}
+
+.asset-confirm-btn:hover {
+  background: rgba(191, 219, 254, 0.65);
+}
+
+.asset-confirm-btn.confirmed {
+  border-color: transparent;
+  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+  color: #ffffff;
+}
+
+.asset-reset-btn {
+  border: 1px dashed rgba(251, 146, 60, 0.7);
+  background: rgba(254, 215, 170, 0.35);
+  color: #c2410c;
+}
+
+.asset-reset-btn:hover {
+  background: rgba(254, 215, 170, 0.55);
+}
+
+.asset-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.asset-status.confirmed {
+  color: #047857;
+}
+
+.asset-status.salary {
+  color: #1d4ed8;
+}
+
+.asset-income-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
 .secret-assets-table .placeholder,
 .secret-passives-table .placeholder {
   color: #94a3b8;
@@ -2453,6 +2626,76 @@ body {
   border: 1.5px solid rgba(59, 130, 246, 0.5);
 }
 
+.network-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.network-multiplier {
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.link-btn {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: #b91c1c;
+}
+
+.network-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(59, 130, 246, 0.25);
+  padding-top: 10px;
+}
+
+.network-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.network-boost {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid rgba(30, 64, 175, 0.4);
+  background: rgba(191, 219, 254, 0.45);
+  color: #1d4ed8;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.network-boost:hover {
+  background: rgba(191, 219, 254, 0.65);
+}
+
+.network-note {
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: #1e3a8a;
+}
+
 .secret-passive-actions {
   display: flex;
   gap: 12px;
@@ -2463,6 +2706,11 @@ body {
 .secret-passive-row.extra td,
 .secret-passive-row.extra th {
   background: rgba(226, 232, 240, 0.3);
+}
+
+.secret-asset-row.extra.confirmed td,
+.secret-asset-row.extra.confirmed th {
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .secret-passive-row.extra input[type="text"] {

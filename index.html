@@ -584,6 +584,87 @@
         </div>
     </div>
 
+    <div id="choiceOverlay" class="choice-overlay">
+        <div class="choice-dialog">
+            <h3 id="choiceTitle">Выберите событие</h3>
+            <div class="choice-options" id="choiceOptions"></div>
+            <button class="close-choice" onclick="closeChoiceOverlay()">Отмена</button>
+        </div>
+    </div>
+
+    <div id="finalReportOverlay" class="report-overlay">
+        <div class="report-dialog">
+            <div class="report-header">
+                <div>
+                    <h2>Финальный отчет</h2>
+                    <p class="report-subtitle">Подробное резюме вашего пути к финансовой свободе</p>
+                </div>
+                <button class="close-report" onclick="closeFinalReport()">×</button>
+            </div>
+            <div class="report-body">
+                <section class="report-summary">
+                    <h3 class="report-section-title">Ключевые метрики</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>Сделано ходов</span>
+                            <strong id="reportTotalTurns">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Потрачено</span>
+                            <strong id="reportTotalSpent">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Вложено в сделки</span>
+                            <strong id="reportTotalInvested">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Заработано</span>
+                            <strong id="reportTotalEarned">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Благотворительность</span>
+                            <strong id="reportCharity">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Доп. расходы</span>
+                            <strong id="reportAdditionalExpenses">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Совместных сделок</span>
+                            <strong id="reportSharedDeals">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Пропущено ходов</span>
+                            <strong id="reportSkippedTurns">0</strong>
+                        </div>
+                    </div>
+                </section>
+                <section class="report-log">
+                    <div class="report-log-header">
+                        <h3 class="report-section-title">Журнал ходов</h3>
+                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Событие</th>
+                                    <th>Участники</th>
+                                    <th>Потрачено</th>
+                                    <th>Вложено</th>
+                                    <th>Заработано</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <!-- ЭКРАН 7: Игровая механика "Секрет денег" -->
     <div class="screen" id="screen7">
         <div class="secret-money-game">
@@ -671,7 +752,6 @@
                 <!-- Круг 1 -->
                 <article class="secret-sheet secret-sd1 active" id="secretSheet1" data-round="1">
                     <header class="secret-sheet-header">
-                        <div class="sheet-code">СД-1</div>
                         <div class="sheet-header-grid">
                             <label class="sheet-field">
                                 <span>Игрок</span>
@@ -726,16 +806,35 @@
                                             <th>Продукт «Бизнес-пакеты»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="1" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="1" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="count"></td>
-                                            <td><span id="secretRound1PackagesTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound1PackagesTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound1PackagesMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(1, 'packages')">Очистить</button>
+                                            </td>
                                         </tr>
                                         <tr data-product="vitamins">
                                             <th>Продукт «Витамины»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="1" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="1" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="count"></td>
-                                            <td><span id="secretRound1VitaminsTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound1VitaminsTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound1VitaminsMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(1, 'vitamins')">Очистить</button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
+                                <div class="network-footer">
+                                    <div class="network-actions">
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(1, 2)">×2</button>
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(1, 3)">×3</button>
+                                    </div>
+                                    <p class="network-note">*активный доход</p>
+                                </div>
                             </section>
                         </section>
                         <section class="secret-passives-block">
@@ -775,10 +874,10 @@
                     </div>
                     <div class="secret-totals-row">
                         <label>ИТОГО ДОХОДОВ
-                            <input type="number" min="0" step="100" data-secret-round="1" data-secret-section="totals" data-secret-field="income">
+                            <input type="number" min="0" step="100" data-secret-round="1" data-secret-section="totals" data-secret-field="income" readonly>
                         </label>
                         <label>ИТОГО ПАССИВНЫЙ ДОХОД
-                            <input type="number" min="0" step="100" data-secret-round="1" data-secret-section="totals" data-secret-field="passive">
+                            <input type="number" min="0" step="100" data-secret-round="1" data-secret-section="totals" data-secret-field="passive" readonly>
                         </label>
                         <label>РЕГУЛЯРНАЯ ПРИБЫЛЬ
                             <input type="number" min="0" step="100" data-secret-round="1" data-secret-section="totals" data-secret-field="regular" readonly>
@@ -852,16 +951,35 @@
                                             <th>Продукт «Бизнес-пакеты»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="2" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="2" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="count"></td>
-                                            <td><span id="secretRound2PackagesTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound2PackagesTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound2PackagesMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(2, 'packages')">Очистить</button>
+                                            </td>
                                         </tr>
                                         <tr data-product="vitamins">
                                             <th>Продукт «Витамины»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="2" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="2" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="count"></td>
-                                            <td><span id="secretRound2VitaminsTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound2VitaminsTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound2VitaminsMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(2, 'vitamins')">Очистить</button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
+                                <div class="network-footer">
+                                    <div class="network-actions">
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(2, 2)">×2</button>
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(2, 3)">×3</button>
+                                    </div>
+                                    <p class="network-note">*активный доход</p>
+                                </div>
                             </section>
                         </section>
                         <section class="secret-passives-block">
@@ -901,10 +1019,10 @@
                     </div>
                     <div class="secret-totals-row">
                         <label>ИТОГО ДОХОДОВ
-                            <input type="number" min="0" step="100" data-secret-round="2" data-secret-section="totals" data-secret-field="income">
+                            <input type="number" min="0" step="100" data-secret-round="2" data-secret-section="totals" data-secret-field="income" readonly>
                         </label>
                         <label>ИТОГО ПАССИВНЫЙ ДОХОД
-                            <input type="number" min="0" step="100" data-secret-round="2" data-secret-section="totals" data-secret-field="passive">
+                            <input type="number" min="0" step="100" data-secret-round="2" data-secret-section="totals" data-secret-field="passive" readonly>
                         </label>
                         <label>РЕГУЛЯРНАЯ ПРИБЫЛЬ
                             <input type="number" min="0" step="100" data-secret-round="2" data-secret-section="totals" data-secret-field="regular" readonly>
@@ -978,16 +1096,35 @@
                                             <th>Продукт «Бизнес-пакеты»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="3" data-secret-section="marketing" data-secret-entry="packages" data-secret-field="count"></td>
-                                            <td><span id="secretRound3PackagesTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound3PackagesTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound3PackagesMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(3, 'packages')">Очистить</button>
+                                            </td>
                                         </tr>
                                         <tr data-product="vitamins">
                                             <th>Продукт «Витамины»</th>
                                             <td><input type="number" min="0" step="100" data-secret-round="3" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="income"></td>
                                             <td><input type="number" min="0" step="1" data-secret-round="3" data-secret-section="marketing" data-secret-entry="vitamins" data-secret-field="count"></td>
-                                            <td><span id="secretRound3VitaminsTotal">₽0</span></td>
+                                            <td>
+                                                <div class="network-total">
+                                                    <span id="secretRound3VitaminsTotal">₽0</span>
+                                                    <span class="network-multiplier" id="secretRound3VitaminsMultiplier"></span>
+                                                </div>
+                                                <button type="button" class="link-btn" onclick="secretClearMarketing(3, 'vitamins')">Очистить</button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
+                                <div class="network-footer">
+                                    <div class="network-actions">
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(3, 2)">×2</button>
+                                        <button type="button" class="network-boost" onclick="secretBoostMarketing(3, 3)">×3</button>
+                                    </div>
+                                    <p class="network-note">*активный доход</p>
+                                </div>
                             </section>
                         </section>
                         <section class="secret-passives-block">
@@ -1027,10 +1164,10 @@
                     </div>
                     <div class="secret-totals-row">
                         <label>ИТОГО ДОХОДОВ
-                            <input type="number" min="0" step="100" data-secret-round="3" data-secret-section="totals" data-secret-field="income">
+                            <input type="number" min="0" step="100" data-secret-round="3" data-secret-section="totals" data-secret-field="income" readonly>
                         </label>
                         <label>ИТОГО ПАССИВНЫЙ ДОХОД
-                            <input type="number" min="0" step="100" data-secret-round="3" data-secret-section="totals" data-secret-field="passive">
+                            <input type="number" min="0" step="100" data-secret-round="3" data-secret-section="totals" data-secret-field="passive" readonly>
                         </label>
                         <label>РЕГУЛЯРНАЯ ПРИБЫЛЬ
                             <input type="number" min="0" step="100" data-secret-round="3" data-secret-section="totals" data-secret-field="regular" readonly>

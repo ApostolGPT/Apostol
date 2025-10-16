@@ -319,6 +319,11 @@ const SECRET_ADDITIONAL_ASSET_OPTIONS = SECRET_ASSET_CATEGORIES
     label: item.label
   }));
 
+const SECRET_MARKETING_LABELS = {
+  packages: 'Продукт «Бизнес-пакеты»',
+  vitamins: 'Продукт «Витамины»'
+};
+
 const SECRET_BASE_PASSIVES = [
   { key: 'living', label: 'Проживание и питание', type: 'fixed' },
   { key: 'child1', label: 'Процветание детей 1', type: 'child' },
@@ -390,6 +395,15 @@ const SECRET_ROUND_CONFIG = {
     getPassiveRows: () => buildSecretPassiveRows(3)
   }
 };
+
+function getSecretAssetDefinition(round, key) {
+  const config = SECRET_ROUND_CONFIG[round];
+  if (!config || typeof config.getAssetRows !== 'function') {
+    return null;
+  }
+  const rows = config.getAssetRows();
+  return rows.find(item => item.key === key) || null;
+}
 
 const LIABILITY_LABELS = {
   homeMortgage: 'Ипотека на дом',
@@ -643,19 +657,22 @@ function applySecretConfigDefaults(sheet, config) {
 
   const assetRows = typeof config.getAssetRows === 'function' ? config.getAssetRows() : [];
   assetRows.forEach(item => {
+    const allowQuantity = item.allowQuantity !== false;
     if (!sheet.assets[item.key]) {
-      sheet.assets[item.key] = {
-        name: '',
-        price: 0,
-        quantity: item.allowQuantity ? 0 : 1,
-        income: 0
-      };
-    } else {
-      const existing = sheet.assets[item.key];
-      existing.name = typeof existing.name === 'string' ? existing.name : '';
-      existing.price = Number(existing.price) || 0;
-      existing.quantity = item.allowQuantity ? Number(existing.quantity ?? 0) : 1;
-      existing.income = Number(existing.income) || 0;
+      sheet.assets[item.key] = {};
+    }
+    const existing = sheet.assets[item.key];
+    existing.name = typeof existing.name === 'string' ? existing.name : '';
+    existing.price = Number(existing.price) || 0;
+    existing.quantity = allowQuantity ? Number(existing.quantity ?? 0) : 1;
+    existing.income = Number(existing.income) || 0;
+    existing.category = existing.category || item.category;
+    existing.label = existing.label || item.label;
+    existing.allowQuantity = allowQuantity;
+    existing.confirmed = !!existing.confirmed;
+    existing.appliedIncome = Number(existing.appliedIncome) || 0;
+    if (!allowQuantity) {
+      existing.quantity = 1;
     }
   });
 
@@ -675,6 +692,18 @@ function applySecretConfigDefaults(sheet, config) {
     sheet.extraAssets = [];
   }
 
+  sheet.extraAssets = sheet.extraAssets.map(entry => ({
+    ...entry,
+    price: Number(entry?.price) || 0,
+    quantity: Number(entry?.quantity) || 0,
+    income: Number(entry?.income) || 0,
+    category: entry?.category || 'other',
+    label: entry?.label || 'Дополнительный актив',
+    allowQuantity: entry?.allowQuantity === false ? false : true,
+    confirmed: !!entry?.confirmed,
+    appliedIncome: Number(entry?.appliedIncome) || 0
+  }));
+
   if (!Array.isArray(sheet.additionalPassives)) {
     sheet.additionalPassives = [];
   }
@@ -687,11 +716,15 @@ function applySecretConfigDefaults(sheet, config) {
   } else {
     sheet.marketing.packages = {
       income: Number(sheet.marketing.packages?.income) || 0,
-      count: Number(sheet.marketing.packages?.count) || 0
+      count: Number(sheet.marketing.packages?.count) || 0,
+      multiplier: Math.max(1, Number(sheet.marketing.packages?.multiplier) || 1),
+      applied: Number(sheet.marketing.packages?.applied) || 0
     };
     sheet.marketing.vitamins = {
       income: Number(sheet.marketing.vitamins?.income) || 0,
-      count: Number(sheet.marketing.vitamins?.count) || 0
+      count: Number(sheet.marketing.vitamins?.count) || 0,
+      multiplier: Math.max(1, Number(sheet.marketing.vitamins?.multiplier) || 1),
+      applied: Number(sheet.marketing.vitamins?.applied) || 0
     };
   }
 
@@ -2213,21 +2246,35 @@ function addIncome() {
   showModal('Доход добавлен', `+$${formattedAmount}${note ? ` (${note})` : ''}`);
 }
 
-function addExpense() {
-  const amount = parseFloat(document.getElementById('transactionAmount').value);
-  const note = document.getElementById('transactionNote').value;
-  
+function recordLoanPayment(index, amount) {
+  const loan = gameData.loans[index];
+  if (!loan) {
+    return;
+  }
+
   if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму расхода');
+    showModal('Ошибка', 'Введите сумму платежа по кредиту.');
     return;
   }
-  
+
   if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств в кошельке');
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
     return;
   }
-  
-  gameData.wallet -= amount;
+
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -2989,7 +3036,12 @@ function applySecretProfessionDefaults() {
   if (sheet1 && sheet1.assets?.salary) {
     sheet1.assets.salary.income = salary;
     sheet1.assets.salary.price = salary;
-    sheet1.assets.salary.quantity = sheet1.assets.salary.quantity ?? 1;
+    sheet1.assets.salary.quantity = 1;
+    sheet1.assets.salary.category = 'salary';
+    sheet1.assets.salary.label = 'Заработная плата';
+    sheet1.assets.salary.allowQuantity = false;
+    sheet1.assets.salary.confirmed = true;
+    sheet1.assets.salary.appliedIncome = salary;
   }
 
   if (sheet1?.passives?.living) {
@@ -3046,8 +3098,12 @@ function clearSecretSheetDom(round) {
   if (select) select.innerHTML = '';
   const packagesTotal = document.getElementById(`secretRound${round}PackagesTotal`);
   if (packagesTotal) packagesTotal.textContent = '₽0';
+  const packagesMultiplier = document.getElementById(`secretRound${round}PackagesMultiplier`);
+  if (packagesMultiplier) packagesMultiplier.textContent = '';
   const vitaminsTotal = document.getElementById(`secretRound${round}VitaminsTotal`);
   if (vitaminsTotal) vitaminsTotal.textContent = '₽0';
+  const vitaminsMultiplier = document.getElementById(`secretRound${round}VitaminsMultiplier`);
+  if (vitaminsMultiplier) vitaminsMultiplier.textContent = '';
   const ledgerLog = document.getElementById(`secretRound${round}LedgerLog`);
   if (ledgerLog) ledgerLog.innerHTML = '';
   const ledgerAmount = document.getElementById(`secretRound${round}LedgerAmount`);
@@ -3067,6 +3123,7 @@ function renderSecretSheet(round) {
     return;
   }
 
+  aggregateSecretIncome(round, sheet);
   renderSecretAssetsTable(round, sheet, config);
   renderSecretPassivesTable(round, sheet, config);
   renderSecretNetwork(round, sheet);
@@ -3084,9 +3141,19 @@ function renderSecretAssetsTable(round, sheet, config) {
   const rows = typeof config.getAssetRows === 'function' ? config.getAssetRows() : [];
 
   rows.forEach(item => {
-    const values = sheet.assets[item.key] || { name: '', price: 0, quantity: item.allowQuantity ? 0 : 1, income: 0 };
+    const values = sheet.assets[item.key] || {
+      name: '',
+      price: 0,
+      quantity: item.allowQuantity ? 0 : 1,
+      income: 0,
+      confirmed: false,
+      appliedIncome: 0
+    };
     const row = document.createElement('tr');
     row.className = 'secret-asset-row';
+    if (values.confirmed) {
+      row.classList.add('confirmed');
+    }
 
     const labelCell = document.createElement('th');
     labelCell.textContent = item.label;
@@ -3118,6 +3185,50 @@ function renderSecretAssetsTable(round, sheet, config) {
     const incomeCell = document.createElement('td');
     incomeCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="assets" data-secret-key="${item.key}" data-secret-field="income" value="${values.income || 0}">`;
 
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
+
+    if (item.category === 'salary') {
+      const status = document.createElement('span');
+      status.className = 'asset-status salary';
+      status.textContent = 'Профессия';
+      actions.appendChild(status);
+      if (Number(values.appliedIncome) > 0) {
+        const incomeBadge = document.createElement('span');
+        incomeBadge.className = 'asset-income-badge';
+        incomeBadge.textContent = `+₽${formatRub(Number(values.appliedIncome) || 0)}`;
+        actions.appendChild(incomeBadge);
+      }
+    } else {
+      const confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = values.confirmed ? 'asset-confirm-btn confirmed' : 'asset-confirm-btn';
+      confirmBtn.textContent = values.confirmed ? 'Обновить' : 'Подтвердить';
+      confirmBtn.onclick = () => confirmSecretAsset(round, item.key);
+      actions.appendChild(confirmBtn);
+
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'asset-reset-btn';
+      resetBtn.textContent = 'Очистить';
+      resetBtn.onclick = () => resetSecretAsset(round, item.key);
+      actions.appendChild(resetBtn);
+
+      const status = document.createElement('span');
+      status.className = values.confirmed ? 'asset-status confirmed' : 'asset-status';
+      status.textContent = values.confirmed ? 'Подтверждено' : 'Черновик';
+      actions.appendChild(status);
+
+      if (values.confirmed && Number(values.appliedIncome) > 0) {
+        const incomeBadge = document.createElement('span');
+        incomeBadge.className = 'asset-income-badge';
+        incomeBadge.textContent = `+₽${formatRub(Number(values.appliedIncome) || 0)}`;
+        actions.appendChild(incomeBadge);
+      }
+    }
+
+    incomeCell.appendChild(actions);
+
     row.appendChild(labelCell);
     row.appendChild(nameCell);
     row.appendChild(priceCell);
@@ -3129,6 +3240,9 @@ function renderSecretAssetsTable(round, sheet, config) {
   (sheet.extraAssets || []).forEach(entry => {
     const row = document.createElement('tr');
     row.className = 'secret-asset-row extra';
+    if (entry.confirmed) {
+      row.classList.add('confirmed');
+    }
 
     const labelCell = document.createElement('th');
     labelCell.textContent = entry.label || 'Дополнительный актив';
@@ -3162,6 +3276,37 @@ function renderSecretAssetsTable(round, sheet, config) {
     const incomeCell = document.createElement('td');
     incomeCell.innerHTML = `<input type="number" min="0" step="100" data-secret-round="${round}" data-secret-section="extra-assets" data-secret-entry="${entry.id}" data-secret-field="income" value="${entry.income || 0}">`;
 
+    const actions = document.createElement('div');
+    actions.className = 'asset-actions';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = entry.confirmed ? 'asset-confirm-btn confirmed' : 'asset-confirm-btn';
+    confirmBtn.textContent = entry.confirmed ? 'Обновить' : 'Подтвердить';
+    confirmBtn.onclick = () => confirmSecretExtraAsset(round, entry.id);
+    actions.appendChild(confirmBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'asset-reset-btn';
+    resetBtn.textContent = 'Очистить';
+    resetBtn.onclick = () => resetSecretExtraAsset(round, entry.id);
+    actions.appendChild(resetBtn);
+
+    const status = document.createElement('span');
+    status.className = entry.confirmed ? 'asset-status confirmed' : 'asset-status';
+    status.textContent = entry.confirmed ? 'Подтверждено' : 'Черновик';
+    actions.appendChild(status);
+
+    if (entry.confirmed && Number(entry.appliedIncome) > 0) {
+      const incomeBadge = document.createElement('span');
+      incomeBadge.className = 'asset-income-badge';
+      incomeBadge.textContent = `+₽${formatRub(Number(entry.appliedIncome) || 0)}`;
+      actions.appendChild(incomeBadge);
+    }
+
+    incomeCell.appendChild(actions);
+
     row.appendChild(labelCell);
     row.appendChild(nameCell);
     row.appendChild(priceCell);
@@ -3169,6 +3314,173 @@ function renderSecretAssetsTable(round, sheet, config) {
     row.appendChild(incomeCell);
     body.appendChild(row);
   });
+}
+
+function confirmSecretAsset(round, key) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet || !sheet.assets) return;
+  const asset = sheet.assets[key];
+  if (!asset) {
+    showModal('Ошибка', 'Заполните данные по активу перед подтверждением.');
+    return;
+  }
+
+  const meta = getSecretAssetDefinition(round, key);
+  const label = meta ? meta.label : asset.label || 'Актив';
+  const allowQuantity = meta ? meta.allowQuantity !== false : asset.allowQuantity !== false;
+  const name = (asset.name || '').trim();
+  const price = Number(asset.price) || 0;
+  const income = Number(asset.income) || 0;
+  let quantity = allowQuantity ? Number(asset.quantity) || 0 : 1;
+  if (allowQuantity && quantity <= 0) {
+    quantity = 1;
+  }
+
+  if (!price && !income) {
+    showModal('Недостаточно данных', 'Укажите стоимость или доход, чтобы подтвердить актив.');
+    return;
+  }
+
+  const appliedIncome = income * (allowQuantity ? quantity : 1);
+  const summary = [`Актив: ${label}`];
+  if (name) summary.push(`Наименование: ${name}`);
+  if (price) summary.push(`Цена: ₽${formatRub(price)}`);
+  if (allowQuantity) summary.push(`Количество: ${quantity}`);
+  if (income) summary.push(`Доход: ₽${formatRub(income)}${allowQuantity ? ' за единицу' : ''}`);
+  if (appliedIncome) summary.push(`Пассивный доход: ₽${formatRub(appliedIncome)}`);
+  summary.push('', 'Подтвердить покупку актива?');
+
+  if (!confirm(summary.join('\n'))) {
+    return;
+  }
+
+  asset.price = price;
+  asset.income = income;
+  asset.quantity = allowQuantity ? quantity : 1;
+  asset.confirmed = true;
+  asset.appliedIncome = appliedIncome;
+  asset.allowQuantity = allowQuantity;
+  asset.category = asset.category || (meta ? meta.category : 'other');
+  asset.label = asset.label || label;
+
+  updateSecretSheetTotals(round);
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+
+  const incomeNote = appliedIncome ? ` +₽${formatRub(appliedIncome)} к пассивному доходу.` : '.';
+  showModal('Актив подтверждён', `${label} зафиксирован${incomeNote}`);
+}
+
+function resetSecretAsset(round, key) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet || !sheet.assets) return;
+  const asset = sheet.assets[key];
+  if (!asset) return;
+
+  const meta = getSecretAssetDefinition(round, key);
+  const label = meta ? meta.label : asset.label || 'Актив';
+  if (!confirm(`Очистить данные по активу «${label}»?`)) {
+    return;
+  }
+
+  asset.price = 0;
+  asset.income = 0;
+  asset.appliedIncome = 0;
+  asset.confirmed = false;
+  if (asset.allowQuantity !== false) {
+    asset.quantity = 0;
+  } else {
+    asset.quantity = 1;
+  }
+
+  updateSecretSheetTotals(round);
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+}
+
+function confirmSecretExtraAsset(round, entryId) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet) return;
+  sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
+  const entry = sheet.extraAssets.find(item => item.id === entryId);
+  if (!entry) return;
+
+  const label = entry.label || 'Дополнительный актив';
+  const name = (entry.name || '').trim();
+  const price = Number(entry.price) || 0;
+  const income = Number(entry.income) || 0;
+  const allowQuantity = entry.allowQuantity === false ? false : true;
+  let quantity = allowQuantity ? Number(entry.quantity) || 0 : 1;
+  if (allowQuantity && quantity <= 0) {
+    quantity = 1;
+  }
+
+  if (!price && !income) {
+    showModal('Недостаточно данных', 'Добавьте стоимость или доход, чтобы подтвердить актив.');
+    return;
+  }
+
+  const appliedIncome = income * (allowQuantity ? quantity : 1);
+  const summary = [`Актив: ${label}`];
+  if (name) summary.push(`Наименование: ${name}`);
+  if (price) summary.push(`Цена: ₽${formatRub(price)}`);
+  if (allowQuantity) summary.push(`Количество: ${quantity}`);
+  if (income) summary.push(`Доход: ₽${formatRub(income)}${allowQuantity ? ' за единицу' : ''}`);
+  if (appliedIncome) summary.push(`Пассивный доход: ₽${formatRub(appliedIncome)}`);
+  summary.push('', 'Подтвердить покупку актива?');
+
+  if (!confirm(summary.join('\n'))) {
+    return;
+  }
+
+  entry.price = price;
+  entry.income = income;
+  entry.quantity = allowQuantity ? quantity : 1;
+  entry.allowQuantity = allowQuantity;
+  entry.confirmed = true;
+  entry.appliedIncome = appliedIncome;
+
+  updateSecretSheetTotals(round);
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+
+  const incomeNote = appliedIncome ? ` +₽${formatRub(appliedIncome)} к пассивному доходу.` : '.';
+  showModal('Актив подтверждён', `${label} зафиксирован${incomeNote}`);
+}
+
+function resetSecretExtraAsset(round, entryId) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet) return;
+  sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
+  const entry = sheet.extraAssets.find(item => item.id === entryId);
+  if (!entry) return;
+
+  const label = entry.label || 'Дополнительный актив';
+  if (!confirm(`Очистить данные по активу «${label}»?`)) {
+    return;
+  }
+
+  entry.price = 0;
+  entry.income = 0;
+  entry.appliedIncome = 0;
+  entry.confirmed = false;
+  if (entry.allowQuantity === false) {
+    entry.quantity = 1;
+  } else {
+    entry.quantity = 0;
+  }
+
+  updateSecretSheetTotals(round);
+  renderSecretAssetsTable(round, sheet, SECRET_ROUND_CONFIG[round]);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
 }
 
 function renderSecretPassivesTable(round, sheet, config) {
@@ -3228,6 +3540,7 @@ function renderSecretNetwork(round, sheet) {
     const incomeInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="marketing"][data-secret-entry="${product}"][data-secret-field="income"]`);
     const countInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="marketing"][data-secret-entry="${product}"][data-secret-field="count"]`);
     const totalSpan = document.getElementById(`secretRound${round}${product.charAt(0).toUpperCase() + product.slice(1)}Total`);
+    const multiplierSpan = document.getElementById(`secretRound${round}${product.charAt(0).toUpperCase() + product.slice(1)}Multiplier`);
 
     const data = sheet.marketing?.[product] || { income: 0, count: 0 };
 
@@ -3238,10 +3551,98 @@ function renderSecretNetwork(round, sheet) {
       countInput.value = data.count || '';
     }
     if (totalSpan) {
-      const total = (Number(data.income) || 0) * (Number(data.count) || 0);
+      const multiplier = Math.max(1, Number(data.multiplier) || 1);
+      const base = (Number(data.income) || 0) * (Number(data.count) || 0);
+      const total = Number(data.applied) || base * multiplier;
       totalSpan.textContent = `₽${formatRub(total)}`;
+      if (multiplierSpan) {
+        multiplierSpan.textContent = multiplier > 1 ? `×${multiplier}` : '';
+      }
+    } else if (multiplierSpan) {
+      const multiplier = Math.max(1, Number(data.multiplier) || 1);
+      multiplierSpan.textContent = multiplier > 1 ? `×${multiplier}` : '';
     }
   });
+}
+
+function secretClearMarketing(round, product) {
+  if (!SECRET_MARKETING_LABELS[product]) {
+    return;
+  }
+
+  const sheet = ensureSecretSheet(round);
+  if (!sheet) return;
+  sheet.marketing = sheet.marketing || {};
+  sheet.marketing[product] = sheet.marketing[product] || { income: 0, count: 0, multiplier: 1, applied: 0 };
+
+  const label = SECRET_MARKETING_LABELS[product];
+  if (!confirm(`Очистить данные по направлению «${label}»?`)) {
+    return;
+  }
+
+  sheet.marketing[product].income = 0;
+  sheet.marketing[product].count = 0;
+  sheet.marketing[product].multiplier = 1;
+  sheet.marketing[product].applied = 0;
+
+  updateSecretSheetTotals(round);
+  renderSecretNetwork(round, sheet);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
+}
+
+function secretBoostMarketing(round, multiplier) {
+  const allowedMultiplier = Number(multiplier);
+  if (![2, 3].includes(allowedMultiplier)) {
+    return;
+  }
+
+  const sheet = ensureSecretSheet(round);
+  if (!sheet) return;
+  sheet.marketing = sheet.marketing || {};
+
+  const candidates = ['packages', 'vitamins'].filter(product => {
+    const data = sheet.marketing[product] || { income: 0, count: 0 };
+    const base = (Number(data.income) || 0) * (Number(data.count) || 0);
+    return base > 0;
+  });
+
+  if (!candidates.length) {
+    showModal('Нет данных', 'Заполните доход и количество в сетевом маркетинге, чтобы умножить результат.');
+    return;
+  }
+
+  let selected = candidates[0];
+  if (candidates.length > 1) {
+    const options = candidates.map((product, index) => `${index + 1}. ${SECRET_MARKETING_LABELS[product]}`).join('\n');
+    const answer = prompt(`Выберите направление для умножения дохода:\n${options}`);
+    if (answer === null) {
+      return;
+    }
+    const index = Number(answer.trim());
+    if (!index || index < 1 || index > candidates.length) {
+      showModal('Ошибка', 'Введите номер направления из списка.');
+      return;
+    }
+    selected = candidates[index - 1];
+  }
+
+  sheet.marketing[selected] = sheet.marketing[selected] || { income: 0, count: 0, multiplier: 1, applied: 0 };
+  const data = sheet.marketing[selected];
+  if ((Number(data.income) || 0) <= 0 || (Number(data.count) || 0) <= 0) {
+    showModal('Нет данных', `Заполните доход и количество для «${SECRET_MARKETING_LABELS[selected]}».`);
+    return;
+  }
+
+  data.multiplier = allowedMultiplier;
+  showModal('Доход увеличен', `${SECRET_MARKETING_LABELS[selected]} теперь умножается ×${allowedMultiplier}.`);
+
+  updateSecretSheetTotals(round);
+  renderSecretNetwork(round, sheet);
+  updateSecretSummary();
+  checkSecretUnlocks();
+  saveGameData();
 }
 
 function renderSecretTotals(round, sheet) {
@@ -3250,10 +3651,12 @@ function renderSecretTotals(round, sheet) {
   const regularInput = document.querySelector(`input[data-secret-round="${round}"][data-secret-section="totals"][data-secret-field="regular"]`);
 
   if (incomeInput && incomeInput !== document.activeElement) {
-    incomeInput.value = sheet.totals?.income || '';
+    const incomeValue = typeof sheet.totals?.income === 'number' ? sheet.totals.income : '';
+    incomeInput.value = incomeValue;
   }
   if (passiveInput && passiveInput !== document.activeElement) {
-    passiveInput.value = sheet.totals?.passive || '';
+    const passiveValue = typeof sheet.totals?.passive === 'number' ? sheet.totals.passive : '';
+    passiveInput.value = passiveValue;
   }
   if (regularInput) {
     regularInput.value = sheet.totals?.regular || 0;
@@ -3333,14 +3736,19 @@ function secretAddAssetRow(round) {
   const option = SECRET_ADDITIONAL_ASSET_OPTIONS.find(item => item.value === category);
   const sheet = ensureSecretSheet(round);
   sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
+  const baseDefinition = SECRET_ASSET_CATEGORIES.find(item => item.category === category);
+  const allowQuantity = baseDefinition ? baseDefinition.allowQuantity !== false : true;
   sheet.extraAssets.push({
     id: generateSecretEntryId('asset'),
     category,
     label: option ? option.label : 'Дополнительный актив',
     name: '',
     price: 0,
-    quantity: 0,
-    income: 0
+    quantity: allowQuantity ? 0 : 1,
+    income: 0,
+    allowQuantity,
+    confirmed: false,
+    appliedIncome: 0
   });
 
   gameData.secretData.sheets[round] = sheet;
@@ -3485,12 +3893,21 @@ function applySecretLedgerEntry(round, entry) {
 }
 
 function updateSecretSheetTotals(round) {
+  const sheet = ensureSecretSheet(round);
+  if (!sheet) {
+    return;
+  }
+
+  aggregateSecretIncome(round, sheet);
   const totals = calculateSecretRoundTotals(round);
   const expenseSpan = document.getElementById(`secretRound${round}ExpenseTotal`);
 
   if (expenseSpan) {
     expenseSpan.textContent = formatRub(totals.expenses);
   }
+
+  renderSecretTotals(round, sheet);
+  renderSecretNetwork(round, sheet);
 }
 
 function calculateSecretRoundTotals(round) {
@@ -3500,6 +3917,7 @@ function calculateSecretRoundTotals(round) {
     return { income: 0, passiveIncome: 0, expenses: 0, net: 0 };
   }
 
+  aggregateSecretIncome(round, sheet);
   const income = Number(sheet.totals?.income) || 0;
   const passiveIncome = Number(sheet.totals?.passive) || 0;
 
@@ -3516,6 +3934,75 @@ function calculateSecretRoundTotals(round) {
 
   const net = income - expenses;
   return { income, passiveIncome, expenses, net };
+}
+
+function aggregateSecretIncome(round, sheet) {
+  if (!sheet) {
+    return { passiveIncome: 0, salaryIncome: 0, marketingIncome: 0, totalIncome: 0, regular: 0 };
+  }
+
+  let passiveIncome = 0;
+  let salaryIncome = 0;
+  const assetEntries = sheet.assets && typeof sheet.assets === 'object' ? sheet.assets : {};
+
+  Object.entries(assetEntries).forEach(([key, asset]) => {
+    if (!asset) return;
+    const category = asset.category || key;
+    const allowQuantity = asset.allowQuantity === false ? false : true;
+    const quantity = allowQuantity ? Math.max(0, Number(asset.quantity) || 0) : 1;
+    const income = Number(asset.income) || 0;
+    const applied = asset.confirmed ? income * (allowQuantity ? quantity : 1) : 0;
+    asset.appliedIncome = asset.confirmed ? applied : 0;
+
+    if (asset.confirmed && applied > 0) {
+      if (category === 'salary') {
+        salaryIncome += applied;
+      } else {
+        passiveIncome += applied;
+      }
+    }
+  });
+
+  if (Array.isArray(sheet.extraAssets)) {
+    sheet.extraAssets.forEach(entry => {
+      const allowQuantity = entry.allowQuantity === false ? false : true;
+      const quantity = allowQuantity ? Math.max(0, Number(entry.quantity) || 0) : 1;
+      const income = Number(entry.income) || 0;
+      const applied = entry.confirmed ? income * (allowQuantity ? quantity : 1) : 0;
+      entry.appliedIncome = entry.confirmed ? applied : 0;
+      if (entry.confirmed && applied > 0) {
+        passiveIncome += applied;
+      }
+    });
+  }
+
+  sheet.marketing = sheet.marketing || { packages: { income: 0, count: 0, multiplier: 1 }, vitamins: { income: 0, count: 0, multiplier: 1 } };
+  const marketingProducts = ['packages', 'vitamins'];
+  let marketingIncome = 0;
+
+  marketingProducts.forEach(product => {
+    const data = sheet.marketing[product] || { income: 0, count: 0, multiplier: 1 };
+    const multiplier = Math.max(1, Number(data.multiplier) || 1);
+    const base = (Number(data.income) || 0) * (Number(data.count) || 0);
+    const applied = base * multiplier;
+    data.multiplier = multiplier;
+    data.applied = applied;
+    sheet.marketing[product] = data;
+    marketingIncome += applied;
+  });
+
+  const baseRegular = Number(sheet.totals?.baseRegular) || 0;
+  const totalIncome = passiveIncome + salaryIncome + marketingIncome;
+  const regular = baseRegular + passiveIncome + marketingIncome;
+
+  sheet.totals = sheet.totals || { income: 0, passive: 0, regular: baseRegular, baseRegular };
+  sheet.totals.passive = Math.round(passiveIncome);
+  sheet.totals.income = Math.round(totalIncome);
+  sheet.totals.regular = Math.round(regular);
+  sheet.totals.salaryIncome = Math.round(salaryIncome);
+  sheet.totals.marketingIncome = Math.round(marketingIncome);
+
+  return { passiveIncome, salaryIncome, marketingIncome, totalIncome, regular };
 }
 
 function updateSecretSummary() {
@@ -3636,6 +4123,8 @@ function setSecretRound(round, options = {}) {
   if (!options.silent) {
     saveGameData();
   }
+
+  return null;
 }
 
 function syncSecretInfoFields() {
@@ -3701,6 +4190,27 @@ function handleSecretFieldInput(event) {
     } else {
       sheet.assets[key][field] = Number(target.value) || 0;
     }
+    sheet.assets[key].confirmed = false;
+    sheet.assets[key].appliedIncome = 0;
+
+    const row = target.closest('tr.secret-asset-row');
+    if (row) {
+      row.classList.remove('confirmed');
+      const badge = row.querySelector('.asset-income-badge');
+      if (badge) {
+        badge.remove();
+      }
+      const status = row.querySelector('.asset-status');
+      if (status && !status.classList.contains('salary')) {
+        status.classList.remove('confirmed');
+        status.textContent = 'Черновик';
+      }
+      const confirmBtn = row.querySelector('.asset-confirm-btn');
+      if (confirmBtn) {
+        confirmBtn.classList.remove('confirmed');
+        confirmBtn.textContent = 'Подтвердить';
+      }
+    }
   } else if (section === 'extra-assets') {
     const entryId = target.dataset.secretEntry;
     sheet.extraAssets = Array.isArray(sheet.extraAssets) ? sheet.extraAssets : [];
@@ -3711,6 +4221,27 @@ function handleSecretFieldInput(event) {
         entry.name = target.value;
       } else {
         entry[field] = Number(target.value) || 0;
+      }
+      entry.confirmed = false;
+      entry.appliedIncome = 0;
+
+      const row = target.closest('tr.secret-asset-row');
+      if (row) {
+        row.classList.remove('confirmed');
+        const badge = row.querySelector('.asset-income-badge');
+        if (badge) {
+          badge.remove();
+        }
+        const status = row.querySelector('.asset-status');
+        if (status) {
+          status.classList.remove('confirmed');
+          status.textContent = 'Черновик';
+        }
+        const confirmBtn = row.querySelector('.asset-confirm-btn');
+        if (confirmBtn) {
+          confirmBtn.classList.remove('confirmed');
+          confirmBtn.textContent = 'Подтвердить';
+        }
       }
     }
   } else if (section === 'passives') {
