@@ -1806,6 +1806,494 @@ function renderLiabilities() {
   });
 }
 
+function promptPartialLiability(index) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (gameData.wallet <= 0) {
+    showModal('Недостаточно средств', 'В кошельке нет средств для частичного погашения.');
+    return;
+  }
+
+  const maxAmount = Math.min(liability.balance, gameData.wallet);
+  if (maxAmount <= 0) {
+    showModal('Ошибка', 'Этот пассив уже погашен.');
+    return;
+  }
+
+  const promptMessage = `Введите сумму, которую готовы заплатить сейчас.\nДоступно в кошельке: ${formatCurrency(gameData.wallet)}\nОстаток долга: ${formatCurrency(liability.balance)}`;
+  const input = prompt(promptMessage, Math.min(1000, maxAmount));
+  if (input === null) {
+    return;
+  }
+
+  const amount = parseFloat(input);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму.');
+    return;
+  }
+
+  const forceClose = amount >= liability.balance;
+  payLiabilityAmount(index, amount, forceClose);
+}
+
+function closeLiabilityCompletely(index) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (gameData.wallet < liability.balance) {
+    showModal('Недостаточно средств', 'У вас недостаточно денег в кошельке, чтобы закрыть пассив полностью.');
+    return;
+  }
+
+  payLiabilityAmount(index, liability.balance, true);
+}
+
+function payLiabilityAmount(index, amount, forceClose = false) {
+  const liability = gameData.liabilities[index];
+  if (!liability || liability.closed) {
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите сумму погашения.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств в кошельке.');
+    return;
+  }
+
+  const previousBalance = liability.balance;
+  const previousPayment = liability.currentPayment || 0;
+  const payment = Math.min(amount, liability.balance);
+  gameData.wallet -= payment;
+  liability.balance = Math.max(0, liability.balance - payment);
+  liability.paid += payment;
+
+  let newPayment = previousPayment;
+  if (liability.originalBalance > 0 && liability.balance > 0) {
+    const ratio = liability.balance / liability.originalBalance;
+    newPayment = liability.originalPayment * ratio;
+    newPayment = Number(newPayment.toFixed(2));
+    if (newPayment < 0.01) {
+      newPayment = 0;
+    }
+  } else {
+    newPayment = 0;
+  }
+
+  if (liability.balance <= 0.01 || forceClose) {
+    liability.balance = 0;
+    liability.closed = true;
+    newPayment = 0;
+  }
+
+  liability.currentPayment = newPayment;
+
+  if (liability.expenseKey) {
+    gameData.expenses[liability.expenseKey] = newPayment;
+  }
+
+  updateCashFlowDisplay();
+
+  const formatted = payment.toLocaleString();
+  const freedDelta = Math.max(0, previousPayment - newPayment);
+  if (liability.closed) {
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Пассив погашен', `${liability.label}: -$${formatted}. Платеж переходит в ваш денежный поток.${freedMessage}`);
+  } else {
+    const freedMessage = freedDelta > 0
+      ? ` Освобождено $${freedDelta.toLocaleString()} и добавлено к вашему денежному потоку.`
+      : '';
+    showModal('Платеж учтен', `${liability.label}: -$${formatted}.${freedMessage}`);
+  }
+}
+
+function calculateFreedCashFlow() {
+  return gameData.liabilities.reduce((total, liability) => {
+    if (!liability.expenseKey) {
+      return total;
+    }
+    const freed = liability.originalPayment - liability.currentPayment;
+    return total + Math.max(0, freed);
+  }, 0);
+}
+
+function getEffectivePassiveIncome() {
+  return gameData.passiveIncome + calculateFreedCashFlow();
+}
+
+function renderLoans() {
+  const loansContainer = document.getElementById('loansList');
+  if (!loansContainer) return;
+
+  loansContainer.innerHTML = '';
+
+  if (!gameData.loans.length) {
+    const empty = document.createElement('div');
+    empty.className = 'loan-empty';
+    empty.textContent = 'Нет активных кредитов.';
+    loansContainer.appendChild(empty);
+    return;
+  }
+
+  gameData.loans.forEach((loan, index) => {
+    const item = document.createElement('div');
+    item.className = 'loan-item';
+
+    item.innerHTML = `
+      <div class="loan-header">
+        <span>Кредит #${index + 1}</span>
+        <span>Остаток: $${loan.remaining.toLocaleString()}</span>
+      </div>
+      <div class="loan-details">
+        <span>Выплачено: $${loan.paid.toLocaleString()} из $${loan.principal.toLocaleString()}</span>
+        <span>Обязательный платеж: $${loan.payment.toLocaleString()}</span>
+      </div>
+    `;
+
+    const controls = document.createElement('div');
+    controls.className = 'loan-controls';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '1';
+    input.placeholder = 'Сумма платежа';
+
+    const payButton = document.createElement('button');
+    payButton.textContent = 'Оплатить';
+    payButton.onclick = () => {
+      recordLoanPayment(index, parseFloat(input.value));
+      input.value = '';
+    };
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'outline';
+    closeButton.textContent = 'Закрыть кредит';
+    closeButton.onclick = () => {
+      recordLoanPayment(index, loan.remaining);
+    };
+
+    controls.appendChild(input);
+    controls.appendChild(payButton);
+    controls.appendChild(closeButton);
+    item.appendChild(controls);
+    loansContainer.appendChild(item);
+  });
+}
+
+function recordLoanPayment(index, amount) {
+  const loan = gameData.loans[index];
+  if (!loan) {
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите сумму платежа по кредиту.');
+    return;
+  }
+
+  if (amount > gameData.wallet) {
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
+    return;
+  }
+
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
+  updateCashFlowDisplay();
+}
+
+function updateCashFlowDisplay() {
+  if (!selectedProfession) return;
+
+  // Обновить название профессии
+  document.getElementById('selectedProfession').textContent = selectedProfession.name;
+
+  const stageLabel = document.getElementById('cashflowStageLabel');
+  if (stageLabel) {
+    stageLabel.textContent = cashFlowStage === 1 ? 'Этап 1: Крысиные гонки' : 'Этап 2: Быстрый трек';
+  }
+
+  const nickname = currentUser?.nickname || 'Гость';
+  const nicknameDisplay = document.getElementById('playerNicknameDisplay');
+  if (nicknameDisplay) {
+    nicknameDisplay.textContent = nickname;
+  }
+
+  const professionDisplay = document.getElementById('stage1ProfessionName');
+  if (professionDisplay) {
+    professionDisplay.textContent = selectedProfession.name;
+  }
+
+  const dreamInput = document.getElementById('playerDream');
+  const stage2DreamDisplay = document.getElementById('stage2DreamDisplay');
+  if (stage2DreamDisplay) {
+    const dreamValue = dreamInput && dreamInput.value.trim() ? dreamInput.value.trim() : '—';
+    stage2DreamDisplay.textContent = dreamValue;
+  }
+
+  // Обновить основные показатели
+  document.getElementById('walletAmount').textContent = `$${gameData.wallet.toLocaleString()}`;
+  const effectivePassive = getEffectivePassiveIncome();
+  document.getElementById('passiveIncomeAmount').textContent = `$${effectivePassive.toLocaleString()}`;
+  document.getElementById('salaryAmount').textContent = `$${selectedProfession.salary.toLocaleString()}`;
+
+  // Обновить расходы
+  updateExpensesDisplay();
+  renderLiabilities();
+  renderLoans();
+  renderStocks();
+  renderRealEstate();
+  renderBusinesses();
+  updateTotalExpenses();
+
+  // Пересчитать доходы
+  updateTotalIncome();
+
+  // Обновить доступный кредит
+  updateAvailableCredit();
+
+  // Обновить кнопку этапов
+  updateStageButtons();
+
+  if (stageTwoUnlocked) {
+    updateStage2Display();
+  }
+}
+
+function updateExpensesDisplay() {
+  const fixedExpensesContainer = document.getElementById('fixedExpenses');
+  if (!fixedExpensesContainer || !selectedProfession) return;
+
+  const expenseLabels = {
+    taxes: 'Налоги',
+    homePayment: 'Оплата залога/аренды',
+    schoolLoan: 'Кредит на обучение',
+    carLoan: 'Кредит на автомобиль',
+    creditCard: 'Кредитная карта',
+    retail: 'Розничные расходы',
+    other: 'Прочие расходы'
+  };
+
+  fixedExpensesContainer.innerHTML = '';
+
+  Object.entries(gameData.expenses).forEach(([key, value]) => {
+    if (key === 'childExpensePerChild') {
+      return;
+    }
+
+    const expenseItem = document.createElement('div');
+    expenseItem.className = 'expense-item';
+    const label = expenseLabels[key] || key;
+    expenseItem.innerHTML = `
+      <label>${label}:</label>
+      <span>$${value.toLocaleString()}</span>
+    `;
+    fixedExpensesContainer.appendChild(expenseItem);
+  });
+
+  if (gameData.loans.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'expense-divider';
+    divider.textContent = 'Кредиты';
+    fixedExpensesContainer.appendChild(divider);
+
+    gameData.loans.forEach((loan, index) => {
+      const expenseItem = document.createElement('div');
+      expenseItem.className = 'expense-item loan-expense';
+      expenseItem.innerHTML = `
+        <label>Кредит #${index + 1}</label>
+        <span>$${loan.payment.toLocaleString()}</span>
+      `;
+      fixedExpensesContainer.appendChild(expenseItem);
+    });
+  }
+
+  renderCustomExpenses();
+}
+
+function renderCustomExpenses() {
+  const list = document.getElementById('customExpensesList');
+  if (!list) return;
+
+  list.innerHTML = '';
+  const extras = Array.isArray(gameData.additionalExpenses) ? gameData.additionalExpenses : [];
+
+  if (!extras.length) {
+    const empty = document.createElement('div');
+    empty.className = 'custom-expense-empty';
+    empty.textContent = 'Дополнительные расходы пока не добавлены.';
+    list.appendChild(empty);
+    return;
+  }
+
+  extras.forEach(expense => {
+    const item = document.createElement('div');
+    item.className = 'custom-expense-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = expense.name;
+    const amountSpan = document.createElement('span');
+    amountSpan.textContent = formatCurrency(expense.amount);
+
+    const removeButton = document.createElement('button');
+    removeButton.textContent = 'Удалить';
+    removeButton.onclick = () => removeCustomExpense(expense.id);
+
+    item.appendChild(nameSpan);
+    item.appendChild(amountSpan);
+    item.appendChild(removeButton);
+    list.appendChild(item);
+  });
+}
+
+function addCustomExpense() {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    gameData.additionalExpenses = [];
+  }
+
+  const nameInput = prompt('Опишите новый расход (например, «Автомобиль»).');
+  if (nameInput === null) {
+    return;
+  }
+
+  const name = nameInput.trim();
+  if (!name) {
+    showModal('Ошибка', 'Введите название расхода.');
+    return;
+  }
+
+  const amountInput = prompt('Укажите сумму ежемесячного расхода в долларах.');
+  if (amountInput === null) {
+    return;
+  }
+
+  const amount = parseFloat(amountInput);
+  if (!amount || amount <= 0) {
+    showModal('Ошибка', 'Введите корректную сумму расхода.');
+    return;
+  }
+
+  const expense = {
+    id: Date.now(),
+    name,
+    amount: Number(amount.toFixed(2))
+  };
+
+  gameData.additionalExpenses.push(expense);
+  const stats = ensureTurnStats();
+  stats.additionalExpenses += expense.amount;
+
+  updateCashFlowDisplay();
+  showModal('Дополнительный расход добавлен', `${expense.name}: ${formatCurrency(expense.amount)} будет учитываться в расходах.`);
+}
+
+function removeCustomExpense(id) {
+  if (!Array.isArray(gameData.additionalExpenses)) {
+    return;
+  }
+
+  const index = gameData.additionalExpenses.findIndex(expense => expense.id === id);
+  if (index === -1) {
+    return;
+  }
+
+  const [removed] = gameData.additionalExpenses.splice(index, 1);
+  updateCashFlowDisplay();
+  showModal('Расход удален', `${removed.name} больше не учитывается в расходах.`);
+}
+
+function renderLiabilities() {
+  const liabilitiesContainer = document.getElementById('liabilitiesList');
+  if (!liabilitiesContainer) return;
+
+  liabilitiesContainer.innerHTML = '';
+
+  if (!gameData.liabilities.length) {
+    const empty = document.createElement('div');
+    empty.className = 'liability-empty';
+    empty.textContent = 'Все пассивы погашены.';
+    liabilitiesContainer.appendChild(empty);
+    return;
+  }
+
+  gameData.liabilities.forEach((liability, index) => {
+    const item = document.createElement('div');
+    item.className = 'liability-item';
+    if (liability.closed) {
+      item.classList.add('liability-closed');
+    }
+
+    const freed = Math.max(0, liability.originalPayment - liability.currentPayment);
+
+    item.innerHTML = `
+      <div class="liability-header">
+        <div>
+          <div class="liability-name">${liability.label}</div>
+          <div class="liability-balance">Остаток: $${liability.balance.toLocaleString()}</div>
+          <div class="liability-progress">Выплачено: $${liability.paid.toLocaleString()} из $${liability.originalBalance.toLocaleString()}</div>
+        </div>
+        <div class="liability-payment">Текущий платеж: $${liability.currentPayment.toLocaleString()}</div>
+      </div>
+    `;
+
+    if (liability.expenseKey && liability.originalPayment > 0) {
+      const summary = document.createElement('div');
+      summary.className = 'liability-extra';
+      summary.innerHTML = `
+        <span>Освобождено ежемесячно</span>
+        <span class="liability-freed">$${freed.toLocaleString()}</span>
+      `;
+      item.appendChild(summary);
+
+      const actions = document.createElement('div');
+      actions.className = 'liability-actions';
+
+      const partialButton = document.createElement('button');
+      partialButton.className = 'liability-action partial';
+      partialButton.textContent = 'Закрыть часть';
+      partialButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet <= 0;
+      partialButton.onclick = () => {
+        promptPartialLiability(index);
+      };
+
+      const fullButton = document.createElement('button');
+      fullButton.className = 'liability-action full';
+      fullButton.textContent = 'Закрыть полностью';
+      fullButton.disabled = liability.closed || liability.balance <= 0 || gameData.wallet < liability.balance;
+      fullButton.onclick = () => {
+        closeLiabilityCompletely(index);
+      };
+
+      actions.appendChild(partialButton);
+      actions.appendChild(fullButton);
+      item.appendChild(actions);
+    }
+
+    liabilitiesContainer.appendChild(item);
+  });
+}
+
 function updateTotalIncome() {
   let totalIncome = selectedProfession.salary;
   
@@ -2376,13 +2864,25 @@ function addExpense() {
     showModal('Ошибка', 'Введите корректную сумму расхода');
     return;
   }
-  
+
   if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств в кошельке');
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
     return;
   }
-  
-  gameData.wallet -= amount;
+
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -4559,6 +5059,8 @@ function setSecretRound(round, options = {}) {
   if (!options.silent) {
     saveGameData();
   }
+
+  return null;
 }
 
 function syncSecretInfoFields() {

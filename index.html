@@ -332,6 +332,71 @@
                         </div>
                     </div>
                 </div>
+                <button class="close-report" onclick="closeFinalReport()">×</button>
+            </div>
+            <div class="report-body">
+                <section class="report-summary">
+                    <h3 class="report-section-title">Ключевые метрики</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>Сделано ходов</span>
+                            <strong id="reportTotalTurns">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Потрачено</span>
+                            <strong id="reportTotalSpent">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Вложено в сделки</span>
+                            <strong id="reportTotalInvested">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Заработано</span>
+                            <strong id="reportTotalEarned">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Благотворительность</span>
+                            <strong id="reportCharity">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Доп. расходы</span>
+                            <strong id="reportAdditionalExpenses">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Совместных сделок</span>
+                            <strong id="reportSharedDeals">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Пропущено ходов</span>
+                            <strong id="reportSkippedTurns">0</strong>
+                        </div>
+                    </div>
+                </section>
+                <section class="report-log">
+                    <div class="report-log-header">
+                        <h3 class="report-section-title">Журнал ходов</h3>
+                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Событие</th>
+                                    <th>Участники</th>
+                                    <th>Потрачено</th>
+                                    <th>Вложено</th>
+                                    <th>Заработано</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
 
                 <div class="stage-form" id="stage2Form">
                     <div class="fast-track-header">
@@ -417,6 +482,68 @@
                     <p>Ваш пассивный доход покрывает все расходы даже с учетом рождения ребенка.</p>
                     <button onclick="goToSecondRound()" class="success-btn">Перейти на второй этап</button>
                 </div>
+                <button class="close-report" onclick="closeFinalReport()">×</button>
+            </div>
+            <div class="report-body">
+                <section class="report-summary">
+                    <h3 class="report-section-title">Ключевые метрики</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>Сделано ходов</span>
+                            <strong id="reportTotalTurns">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Потрачено</span>
+                            <strong id="reportTotalSpent">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Вложено в сделки</span>
+                            <strong id="reportTotalInvested">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Заработано</span>
+                            <strong id="reportTotalEarned">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Благотворительность</span>
+                            <strong id="reportCharity">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Доп. расходы</span>
+                            <strong id="reportAdditionalExpenses">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Совместных сделок</span>
+                            <strong id="reportSharedDeals">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Пропущено ходов</span>
+                            <strong id="reportSkippedTurns">0</strong>
+                        </div>
+                    </div>
+                </section>
+                <section class="report-log">
+                    <div class="report-log-header">
+                        <h3 class="report-section-title">Журнал ходов</h3>
+                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Событие</th>
+                                    <th>Участники</th>
+                                    <th>Потрачено</th>
+                                    <th>Вложено</th>
+                                    <th>Заработано</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
