@@ -1095,7 +1095,103 @@ body {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
-  color: var(--primary-color);
+}
+
+.ledger-controls .expense-btn {
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.ledger-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ledger-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(226, 232, 240, 0.4);
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.ledger-item.expense {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.ledger-item.salary {
+  background: rgba(56, 189, 248, 0.2);
+  color: #0369a1;
+}
+
+@media (max-width: 1024px) {
+  .secret-money-game {
+    padding: 24px;
+  }
+
+  .secret-header {
+    align-items: flex-start;
+  }
+
+  .secret-title {
+    text-align: left;
+  }
+
+  .profession-chip {
+    align-items: flex-start;
+  }
+
+  .secret-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .secret-money-game {
+    padding: 20px;
+  }
+
+  .secret-title h1 {
+    font-size: 1.8rem;
+  }
+
+  .secret-sheet-header {
+    flex-direction: column;
+  }
+
+  .sheet-code {
+    width: 72px;
+    height: 72px;
+    font-size: 1.2rem;
+  }
+
+  .secret-totals-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .round-tab {
+    font-size: 0.95rem;
+  }
+
+  .overview-card {
+    padding: 18px;
+  }
+
+  .secret-sheet {
+    padding: 20px;
+  }
 }
 
 .loan-details {
@@ -1894,22 +1990,51 @@ body {
 }
 
 .wallet-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.wallet-actions input {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-}
-
-.wallet-buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.wallet-ledger-btn {
+  padding: 12px 0;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.wallet-ledger-btn.salary {
+  background: #e4f1fb;
+  border-color: #9dc5dd;
+  color: #144766;
+}
+
+.wallet-ledger-btn.salary:hover {
+  background: #d7e8f6;
+}
+
+.wallet-ledger-btn.income {
+  background: #e6f2ec;
+  border-color: #9dc9b1;
+  color: #1f5638;
+}
+
+.wallet-ledger-btn.income:hover {
+  background: #d7e9df;
+}
+
+.wallet-ledger-btn.expense {
+  background: #fbeae4;
+  border-color: #e2b5a1;
+  color: #7b2d12;
+}
+
+.wallet-ledger-btn.expense:hover {
+  background: #f3ded5;
 }
 
 .flow-card dl {
@@ -2337,7 +2462,8 @@ body {
 }
 
 .secret-assets-table,
-.secret-passives-table {
+.secret-passives-table,
+.secret-inventory-table {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid #e2e8f0;
@@ -2349,7 +2475,9 @@ body {
 .secret-assets-table th,
 .secret-assets-table td,
 .secret-passives-table th,
-.secret-passives-table td {
+.secret-passives-table td,
+.secret-inventory-table th,
+.secret-inventory-table td {
   padding: 12px 14px;
   border-bottom: 1px solid #d8dee6;
   font-size: 0.94rem;
@@ -2357,7 +2485,8 @@ body {
 }
 
 .secret-assets-table th,
-.secret-passives-table th {
+.secret-passives-table th,
+.secret-inventory-table th {
   background: #f4f7fb;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2366,12 +2495,14 @@ body {
 }
 
 .secret-assets-table tr:last-child td,
-.secret-passives-table tr:last-child td {
+.secret-passives-table tr:last-child td,
+.secret-inventory-table tr:last-child td {
   border-bottom: none;
 }
 
 .secret-assets-table input,
-.secret-passives-table input {
+.secret-passives-table input,
+.secret-inventory-table input {
   width: 100%;
   padding: 8px 10px;
   border-radius: 10px;
@@ -2402,59 +2533,90 @@ body {
   background: var(--row-fill);
 }
 
+.secret-asset-row.confirmed::before {
 .secret-asset-row.confirmed th,
 .secret-asset-row.confirmed td {
-  background: linear-gradient(135deg, var(--row-fill) 0%, rgba(34, 197, 94, 0.18) 100%);
+  box-shadow: inset 0 0 0 1px rgba(58, 130, 96, 0.22);
 }
 
 .secret-asset-row.confirmed::before {
-  border-left-color: #1f9b6d;
-  opacity: 0.9;
+  border-left-color: #3a8260;
+  opacity: 0.85;
 }
 
 .secret-asset-row[data-family="property"] {
-  --row-accent: #c16a6a;
-  --row-fill: #fff4f1;
+  --row-accent: #b47a6d;
+  --row-fill: #f5ece9;
 }
 
 .secret-asset-row[data-family="securities"] {
-  --row-accent: #5a7ad1;
-  --row-fill: #f1f5ff;
+  --row-accent: #6d7fb2;
+  --row-fill: #eef1f8;
 }
 
 .secret-asset-row[data-family="business"] {
-  --row-accent: #2f7356;
-  --row-fill: #f1f9f4;
+  --row-accent: #4f8a6d;
+  --row-fill: #eef5f1;
 }
 
 .secret-asset-row[data-family="savings"] {
-  --row-accent: #6f7685;
-  --row-fill: #f6f7fa;
+  --row-accent: #7d8391;
+  --row-fill: #f2f4f6;
 }
 
 .secret-asset-row[data-family="other"] {
-  --row-accent: #c9982a;
-  --row-fill: #fff9e6;
+  --row-accent: #c5a65a;
+  --row-fill: #f9f4e4;
 }
 
 .secret-asset-row[data-family="inventory"] {
-  --row-accent: #c38352;
-  --row-fill: #fff4ea;
+  --row-accent: #8a74b1;
+  --row-fill: #f1ecfa;
 }
 
-.asset-field-wrapper {
+.asset-label-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
 }
 
-.asset-field-label {
-  font-size: 0.7rem;
+.asset-label-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.asset-label-title {
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #4b5563;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.asset-name-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d4d8df;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: #1e293b;
+  background: #ffffff;
+}
+
+.asset-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.asset-readonly {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #eef1f4;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .dream-field {
@@ -2712,14 +2874,6 @@ body {
   filter: brightness(1.06);
 }
 
-.asset-actions {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
 .asset-confirm-btn,
 .asset-sell-btn {
   padding: 8px 16px;
@@ -2734,30 +2888,30 @@ body {
 }
 
 .asset-confirm-btn {
-  border-color: rgba(30, 102, 74, 0.4);
-  background: rgba(34, 197, 94, 0.16);
-  color: #14532d;
+  border-color: rgba(45, 112, 82, 0.4);
+  background: #e4f2ea;
+  color: #1f5a3b;
 }
 
 .asset-confirm-btn:hover {
-  background: rgba(34, 197, 94, 0.26);
+  background: #d7e8dd;
 }
 
 .asset-confirm-btn.confirmed {
-  border-color: rgba(20, 83, 45, 0.65);
-  background: linear-gradient(135deg, #2dd4bf 0%, #16a34a 100%);
-  color: #ffffff;
-  box-shadow: 0 6px 18px -14px rgba(16, 185, 129, 0.8);
+  border-color: rgba(31, 93, 63, 0.6);
+  background: #d0e8d8;
+  color: #174e35;
+  box-shadow: none;
 }
 
 .asset-sell-btn {
-  border-color: rgba(190, 120, 52, 0.4);
-  background: rgba(253, 186, 116, 0.22);
-  color: #7c2d12;
+  border-color: rgba(190, 134, 70, 0.4);
+  background: #f6ebe0;
+  color: #7b3a16;
 }
 
 .asset-sell-btn:hover {
-  background: rgba(253, 186, 116, 0.35);
+  background: #efe0d2;
 }
 
 .asset-status {
@@ -2787,7 +2941,8 @@ body {
 }
 
 .secret-assets-table .placeholder,
-.secret-passives-table .placeholder {
+.secret-passives-table .placeholder,
+.secret-inventory-table .placeholder {
   color: #94a3b8;
   font-style: italic;
 }
@@ -2821,6 +2976,37 @@ body {
   border: 1.5px solid #38bdf8;
   background: #fff;
   font-size: 0.95rem;
+}
+
+.secret-inventory-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid #d7ccf1;
+  background: #f6f1ff;
+  box-shadow: inset 0 0 0 1px rgba(152, 128, 196, 0.08);
+}
+
+.secret-inventory-card > header {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #5c3f91;
+}
+
+.secret-inventory-card .secret-inventory-table {
+  border-color: #d7ccf1;
+}
+
+.secret-inventory-card .secret-inventory-table th {
+  background: #f2ecff;
+  color: #4a2f82;
+}
+
+.secret-inventory-card .secret-inventory-table td {
+  border-bottom-color: #e1d7f3;
 }
 
 .secret-network-card {
@@ -2960,12 +3146,6 @@ body {
 }
 
 .passive-label-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.asset-name-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
