@@ -657,11 +657,9 @@
                     <h3>Кошелёк</h3>
                     <p class="overview-value">₽<span id="secretWalletValue">0</span></p>
                     <div class="wallet-actions">
-                        <input type="number" id="secretWalletAdjustment" placeholder="Сумма">
-                        <div class="wallet-buttons">
-                            <button type="button" class="income-btn" onclick="secretApplyWalletChange('add')">Пополнить</button>
-                            <button type="button" class="expense-btn" onclick="secretApplyWalletChange('subtract')">Списать</button>
-                        </div>
+                        <button type="button" class="wallet-ledger-btn salary" onclick="secretTriggerWalletAction('salary')">Зарплата</button>
+                        <button type="button" class="wallet-ledger-btn income" onclick="secretTriggerWalletAction('income')">Доход</button>
+                        <button type="button" class="wallet-ledger-btn expense" onclick="secretTriggerWalletAction('expense')">Расход</button>
                     </div>
                 </div>
                 <div class="overview-card flow-card">
@@ -739,10 +737,10 @@
                                 <thead>
                                     <tr>
                                         <th>Актив</th>
-                                        <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход / Остаток</th>
+                                        <th>Доход</th>
+                                        <th>Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound1Assets"></tbody>
@@ -849,11 +847,6 @@
                     </div>
                     <section class="secret-ledger">
                         <header>Учетная книга (заметки и записи)</header>
-                        <div class="ledger-controls">
-                            <button type="button" class="salary-btn" onclick="secretLedgerPaySalary(1)">Зарплата</button>
-                            <button type="button" class="income-btn" onclick="secretLedgerApply(1, 'income')">Доход</button>
-                            <button type="button" class="expense-btn" onclick="secretLedgerApply(1, 'expense')">Расход</button>
-                        </div>
                         <ul class="ledger-log" id="secretRound1LedgerLog"></ul>
                     </section>
                 </article>
@@ -883,10 +876,10 @@
                                 <thead>
                                     <tr>
                                         <th>Актив</th>
-                                        <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход / Остаток</th>
+                                        <th>Доход</th>
+                                        <th>Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound2Assets"></tbody>
@@ -898,6 +891,21 @@
                                 </label>
                                 <button type="button" class="ghost-btn" onclick="secretAddAssetRow(2)">Добавить колонку</button>
                             </div>
+                            <section class="secret-inventory-card" id="secretRound2InventoryCard">
+                                <header>Товарный бизнес</header>
+                                <table class="secret-inventory-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Закупка товара</th>
+                                            <th>Цена</th>
+                                            <th>Кол-во</th>
+                                            <th>Остаток</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound2Inventory"></tbody>
+                                </table>
+                            </section>
                             <section class="secret-network-card">
                                 <header>Сетевой маркетинг</header>
                                 <table class="secret-network-table">
@@ -993,11 +1001,6 @@
                     </div>
                     <section class="secret-ledger">
                         <header>Учетная книга (заметки и записи)</header>
-                        <div class="ledger-controls">
-                            <button type="button" class="salary-btn" onclick="secretLedgerPaySalary(2)">Зарплата</button>
-                            <button type="button" class="income-btn" onclick="secretLedgerApply(2, 'income')">Доход</button>
-                            <button type="button" class="expense-btn" onclick="secretLedgerApply(2, 'expense')">Расход</button>
-                        </div>
                         <ul class="ledger-log" id="secretRound2LedgerLog"></ul>
                     </section>
                 </article>
@@ -1027,10 +1030,10 @@
                                 <thead>
                                     <tr>
                                         <th>Актив</th>
-                                        <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход / Остаток</th>
+                                        <th>Доход</th>
+                                        <th>Действия</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound3Assets"></tbody>
@@ -1042,6 +1045,21 @@
                                 </label>
                                 <button type="button" class="ghost-btn" onclick="secretAddAssetRow(3)">Добавить колонку</button>
                             </div>
+                            <section class="secret-inventory-card" id="secretRound3InventoryCard">
+                                <header>Товарный бизнес</header>
+                                <table class="secret-inventory-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Закупка товара</th>
+                                            <th>Цена</th>
+                                            <th>Кол-во</th>
+                                            <th>Остаток</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="secretRound3Inventory"></tbody>
+                                </table>
+                            </section>
                             <section class="secret-network-card">
                                 <header>Сетевой маркетинг</header>
                                 <table class="secret-network-table">
@@ -1152,11 +1170,6 @@
                     </div>
                     <section class="secret-ledger">
                         <header>Учетная книга (заметки и записи)</header>
-                        <div class="ledger-controls">
-                            <button type="button" class="salary-btn" onclick="secretLedgerPaySalary(3)">Зарплата</button>
-                            <button type="button" class="income-btn" onclick="secretLedgerApply(3, 'income')">Доход</button>
-                            <button type="button" class="expense-btn" onclick="secretLedgerApply(3, 'expense')">Расход</button>
-                        </div>
                         <ul class="ledger-log" id="secretRound3LedgerLog"></ul>
                     </section>
                 </article>
