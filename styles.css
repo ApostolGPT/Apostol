@@ -1095,103 +1095,7 @@ body {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
-}
-
-.ledger-controls .expense-btn {
-  background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 9999px;
-  font-weight: 600;
-}
-
-.ledger-log {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.ledger-item {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(226, 232, 240, 0.4);
-  font-size: 0.92rem;
-  color: #0f172a;
-}
-
-.ledger-item.expense {
-  background: rgba(248, 113, 113, 0.18);
-  color: #b91c1c;
-}
-
-.ledger-item.salary {
-  background: rgba(56, 189, 248, 0.2);
-  color: #0369a1;
-}
-
-@media (max-width: 1024px) {
-  .secret-money-game {
-    padding: 24px;
-  }
-
-  .secret-header {
-    align-items: flex-start;
-  }
-
-  .secret-title {
-    text-align: left;
-  }
-
-  .profession-chip {
-    align-items: flex-start;
-  }
-
-  .secret-main-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .secret-money-game {
-    padding: 20px;
-  }
-
-  .secret-title h1 {
-    font-size: 1.8rem;
-  }
-
-  .secret-sheet-header {
-    flex-direction: column;
-  }
-
-  .sheet-code {
-    width: 72px;
-    height: 72px;
-    font-size: 1.2rem;
-  }
-
-  .secret-totals-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 540px) {
-  .round-tab {
-    font-size: 0.95rem;
-  }
-
-  .overview-card {
-    padding: 18px;
-  }
-
-  .secret-sheet {
-    padding: 20px;
-  }
+  color: var(--primary-color);
 }
 
 .loan-details {
@@ -2407,11 +2311,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 24px;
-  border-radius: 16px;
-  border: 1.5px solid #cbd5e1;
-  background: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  padding: 22px 26px;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 18px 30px -24px rgba(15, 23, 42, 0.35);
+}
+
+.secret-assets-block {
+  border: 2px solid #1f4d3b;
+  background: linear-gradient(180deg, #f7fbf9 0%, #eff7f2 100%);
+}
+
+.secret-passives-block {
+  border: 2px solid #7b1f34;
+  background: linear-gradient(180deg, #fff6f8 0%, #ffeef3 100%);
 }
 
 .panel-title {
@@ -2433,19 +2345,20 @@ body {
   overflow: hidden;
 }
 
+
 .secret-assets-table th,
 .secret-assets-table td,
 .secret-passives-table th,
 .secret-passives-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  border-bottom: 1px solid #d8dee6;
   font-size: 0.94rem;
   color: #0f172a;
 }
 
 .secret-assets-table th,
 .secret-passives-table th {
-  background: #f1f5f9;
+  background: #f4f7fb;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
@@ -2461,61 +2374,390 @@ body {
 .secret-passives-table input {
   width: 100%;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1.5px solid #cbd5e1;
   font-size: 0.95rem;
   color: #0f172a;
+  background: #ffffff;
+}
+
+.secret-asset-row {
+  --row-accent: #cbd5f5;
+  --row-fill: #ffffff;
+  position: relative;
+}
+
+.secret-asset-row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-left: 6px solid var(--row-accent);
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.secret-asset-row th,
+.secret-asset-row td {
+  background: var(--row-fill);
 }
 
 .secret-asset-row.confirmed th,
 .secret-asset-row.confirmed td {
-  background: rgba(16, 185, 129, 0.08);
+  background: linear-gradient(135deg, var(--row-fill) 0%, rgba(34, 197, 94, 0.18) 100%);
+}
+
+.secret-asset-row.confirmed::before {
+  border-left-color: #1f9b6d;
+  opacity: 0.9;
+}
+
+.secret-asset-row[data-family="property"] {
+  --row-accent: #c16a6a;
+  --row-fill: #fff4f1;
+}
+
+.secret-asset-row[data-family="securities"] {
+  --row-accent: #5a7ad1;
+  --row-fill: #f1f5ff;
+}
+
+.secret-asset-row[data-family="business"] {
+  --row-accent: #2f7356;
+  --row-fill: #f1f9f4;
+}
+
+.secret-asset-row[data-family="savings"] {
+  --row-accent: #6f7685;
+  --row-fill: #f6f7fa;
+}
+
+.secret-asset-row[data-family="other"] {
+  --row-accent: #c9982a;
+  --row-fill: #fff9e6;
+}
+
+.secret-asset-row[data-family="inventory"] {
+  --row-accent: #c38352;
+  --row-fill: #fff4ea;
+}
+
+.asset-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.asset-field-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4b5563;
+}
+
+.dream-field {
+  border: 2px solid rgba(236, 72, 153, 0.35);
+  border-radius: 16px;
+  padding: 8px 12px;
+  background: rgba(252, 232, 243, 0.3);
+  transition: all 0.25s ease;
+}
+
+.dream-field input {
+  border-color: rgba(236, 72, 153, 0.3);
+  background: #fff9fc;
+}
+
+.dream-field.filled {
+  background: rgba(252, 232, 243, 0.5);
+}
+
+.dream-field.confirmed {
+  border-color: #d946a3;
+  background: rgba(251, 207, 232, 0.7);
+  box-shadow: 0 0 0 2px rgba(217, 70, 163, 0.15);
+}
+
+.secret-goals-panel {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 2px solid rgba(31, 77, 59, 0.45);
+  border-radius: 18px;
+  background: rgba(236, 253, 245, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.secret-goals-panel header {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1f4d3b;
+  margin-bottom: 12px;
+}
+
+.secret-goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.secret-goal-card {
+  border-radius: 16px;
+  padding: 18px 20px;
+  background: #fffaf0;
+  border: 2px solid #b68a32;
+  box-shadow: 0 12px 24px -20px rgba(107, 83, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 160px;
+}
+
+.secret-goal-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #744d12;
+}
+
+.secret-goal-card .goal-progress {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3f4c3b;
+}
+
+.secret-goal-card button {
+  align-self: flex-start;
+  padding: 8px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(31, 77, 59, 0.45);
+  background: rgba(34, 197, 94, 0.18);
+  color: #155e35;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.secret-goal-card button:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.secret-goal-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secret-goal-card.dream {
+  background: #fff5f9;
+  border-color: #d277aa;
+  box-shadow: 0 12px 24px -20px rgba(186, 85, 140, 0.4);
+}
+
+.secret-goal-card.dream h4 {
+  color: #9d366f;
+}
+
+.secret-goal-card.dream button {
+  border-color: rgba(210, 119, 170, 0.5);
+  background: rgba(236, 72, 153, 0.18);
+  color: #a83274;
+}
+
+.secret-goal-card.dream button:hover:not(:disabled) {
+  background: rgba(236, 72, 153, 0.28);
+}
+
+.secret-goal-card.completed {
+  border-color: #1f9b6d;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(13, 148, 136, 0.2) 100%);
+  color: #065f46;
+}
+
+.secret-goal-card.completed h4 {
+  color: inherit;
+}
+
+.secret-goal-card.completed button {
+  background: rgba(15, 118, 110, 0.25);
+  border-color: rgba(15, 118, 110, 0.45);
+  color: #0f766e;
+}
+
+.secret-goal-card.dream.completed {
+  border-color: #d946a3;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(244, 114, 182, 0.28) 100%);
+  color: #9d174d;
+}
+
+.secret-goal-card.dream.completed button {
+  border-color: rgba(217, 70, 163, 0.5);
+  background: rgba(217, 70, 163, 0.18);
+  color: #9d174d;
+}
+
+.goal-dream-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #93346a;
+}
+
+.secret-goal-notice {
+  display: none;
+  margin-top: 24px;
+  border: 2px dashed rgba(182, 138, 50, 0.5);
+  border-radius: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 250, 235, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.secret-goal-notice.active {
+  display: block;
+}
+
+.secret-goal-message h4 {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  color: #8a5b12;
+}
+
+.secret-goal-message p {
+  margin: 0;
+  color: #6b4e10;
+  font-size: 0.95rem;
+}
+
+.secret-victory-banner {
+  display: none;
+  margin-top: 28px;
+  padding: 20px 24px;
+  border: 3px solid #d1b451;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #fff9e5 0%, #fff4d4 100%);
+  box-shadow: 0 18px 32px -24px rgba(161, 98, 7, 0.6);
+  align-items: center;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.secret-victory-banner.active {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.secret-victory-banner.celebrate {
+  animation: secret-victory-glow 2.5s ease;
+}
+
+.secret-victory-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  color: #8b5a16;
+}
+
+.secret-victory-text p {
+  margin: 0;
+  color: #744d12;
+  font-size: 0.95rem;
+}
+
+@keyframes secret-victory-glow {
+  0% { box-shadow: 0 0 0 0 rgba(209, 180, 81, 0.6); }
+  50% { box-shadow: 0 0 24px 6px rgba(209, 180, 81, 0.45); }
+  100% { box-shadow: 0 18px 32px -24px rgba(161, 98, 7, 0.6); }
+}
+
+.income-btn,
+.expense-btn,
+.salary-btn {
+  border: none;
+  border-radius: 16px;
+  padding: 10px 20px;
+  min-width: 140px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+  box-shadow: 0 10px 20px -18px rgba(15, 23, 42, 0.6);
+}
+
+.income-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+  color: #f8fafc;
+}
+
+.income-btn:hover {
+  filter: brightness(1.05);
+}
+
+.expense-btn {
+  background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+  color: #fff7ed;
+}
+
+.expense-btn:hover {
+  filter: brightness(1.05);
+}
+
+.salary-btn {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 45%, #0f766e 100%);
+  color: #f0f9ff;
+}
+
+.salary-btn:hover {
+  filter: brightness(1.06);
 }
 
 .asset-actions {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .asset-confirm-btn,
-.asset-reset-btn {
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-size: 0.78rem;
+.asset-sell-btn {
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
 }
 
 .asset-confirm-btn {
-  border: 1px solid rgba(59, 130, 246, 0.5);
-  background: rgba(191, 219, 254, 0.4);
-  color: #1d4ed8;
+  border-color: rgba(30, 102, 74, 0.4);
+  background: rgba(34, 197, 94, 0.16);
+  color: #14532d;
 }
 
 .asset-confirm-btn:hover {
-  background: rgba(191, 219, 254, 0.65);
+  background: rgba(34, 197, 94, 0.26);
 }
 
 .asset-confirm-btn.confirmed {
-  border-color: transparent;
-  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+  border-color: rgba(20, 83, 45, 0.65);
+  background: linear-gradient(135deg, #2dd4bf 0%, #16a34a 100%);
   color: #ffffff;
+  box-shadow: 0 6px 18px -14px rgba(16, 185, 129, 0.8);
 }
 
-.asset-reset-btn {
-  border: 1px dashed rgba(251, 146, 60, 0.7);
-  background: rgba(254, 215, 170, 0.35);
-  color: #c2410c;
+.asset-sell-btn {
+  border-color: rgba(190, 120, 52, 0.4);
+  background: rgba(253, 186, 116, 0.22);
+  color: #7c2d12;
 }
 
-.asset-reset-btn:hover {
-  background: rgba(254, 215, 170, 0.55);
+.asset-sell-btn:hover {
+  background: rgba(253, 186, 116, 0.35);
 }
 
 .asset-status {
@@ -2673,20 +2915,20 @@ body {
 }
 
 .network-boost {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  border: 1px solid rgba(30, 64, 175, 0.4);
-  background: rgba(191, 219, 254, 0.45);
+  padding: 8px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.15);
   color: #1d4ed8;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .network-boost:hover {
-  background: rgba(191, 219, 254, 0.65);
+  background: rgba(59, 130, 246, 0.28);
 }
 
 .network-note {

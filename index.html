@@ -332,23 +332,68 @@
                         </div>
                     </div>
                 </div>
+                <button class="close-report" onclick="closeFinalReport()">×</button>
             </div>
-            <div class="report-log">
-                <h3>Журнал ходов</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Событие</th>
-                            <th>Участники</th>
-                            <th>Потрачено</th>
-                            <th>Вложено</th>
-                            <th>Заработано</th>
-                            <th>Комментарий</th>
-                        </tr>
-                    </thead>
-                    <tbody id="finalReportTableBody"></tbody>
-                </table>
+            <div class="report-body">
+                <section class="report-summary">
+                    <h3 class="report-section-title">Ключевые метрики</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>Сделано ходов</span>
+                            <strong id="reportTotalTurns">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Потрачено</span>
+                            <strong id="reportTotalSpent">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Вложено в сделки</span>
+                            <strong id="reportTotalInvested">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Заработано</span>
+                            <strong id="reportTotalEarned">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Благотворительность</span>
+                            <strong id="reportCharity">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Доп. расходы</span>
+                            <strong id="reportAdditionalExpenses">$0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Совместных сделок</span>
+                            <strong id="reportSharedDeals">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>Пропущено ходов</span>
+                            <strong id="reportSkippedTurns">0</strong>
+                        </div>
+                    </div>
+                </section>
+                <section class="report-log">
+                    <div class="report-log-header">
+                        <h3 class="report-section-title">Журнал ходов</h3>
+                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
+                    </div>
+                    <div class="report-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Событие</th>
+                                    <th>Участники</th>
+                                    <th>Потрачено</th>
+                                    <th>Вложено</th>
+                                    <th>Заработано</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finalReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -584,87 +629,6 @@
         </div>
     </div>
 
-    <div id="choiceOverlay" class="choice-overlay">
-        <div class="choice-dialog">
-            <h3 id="choiceTitle">Выберите событие</h3>
-            <div class="choice-options" id="choiceOptions"></div>
-            <button class="close-choice" onclick="closeChoiceOverlay()">Отмена</button>
-        </div>
-    </div>
-
-    <div id="finalReportOverlay" class="report-overlay">
-        <div class="report-dialog">
-            <div class="report-header">
-                <div>
-                    <h2>Финальный отчет</h2>
-                    <p class="report-subtitle">Подробное резюме вашего пути к финансовой свободе</p>
-                </div>
-                <button class="close-report" onclick="closeFinalReport()">×</button>
-            </div>
-            <div class="report-body">
-                <section class="report-summary">
-                    <h3 class="report-section-title">Ключевые метрики</h3>
-                    <div class="summary-grid">
-                        <div class="summary-card">
-                            <span>Сделано ходов</span>
-                            <strong id="reportTotalTurns">0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Потрачено</span>
-                            <strong id="reportTotalSpent">$0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Вложено в сделки</span>
-                            <strong id="reportTotalInvested">$0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Заработано</span>
-                            <strong id="reportTotalEarned">$0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Благотворительность</span>
-                            <strong id="reportCharity">$0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Доп. расходы</span>
-                            <strong id="reportAdditionalExpenses">$0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Совместных сделок</span>
-                            <strong id="reportSharedDeals">0</strong>
-                        </div>
-                        <div class="summary-card">
-                            <span>Пропущено ходов</span>
-                            <strong id="reportSkippedTurns">0</strong>
-                        </div>
-                    </div>
-                </section>
-                <section class="report-log">
-                    <div class="report-log-header">
-                        <h3 class="report-section-title">Журнал ходов</h3>
-                        <p>Отслеживайте события, сделки и расходы за весь сценарий.</p>
-                    </div>
-                    <div class="report-table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Событие</th>
-                                    <th>Участники</th>
-                                    <th>Потрачено</th>
-                                    <th>Вложено</th>
-                                    <th>Заработано</th>
-                                    <th>Комментарий</th>
-                                </tr>
-                            </thead>
-                            <tbody id="finalReportTableBody"></tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
     <!-- ЭКРАН 7: Игровая механика "Секрет денег" -->
     <div class="screen" id="screen7">
         <div class="secret-money-game">
@@ -740,7 +704,7 @@
                             Профессия
                             <input type="text" id="secretProfessionField" readonly>
                         </label>
-                        <label>
+                        <label class="dream-field">
                             Ваша мечта
                             <input type="text" id="secretPlayerDream" data-secret-round="1" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
                         </label>
@@ -761,7 +725,7 @@
                                 <span>Профессия</span>
                                 <input type="text" id="secretProfessionRound1" readonly>
                             </label>
-                            <label class="sheet-field">
+                            <label class="sheet-field dream-field">
                                 <span>Ваша мечта</span>
                                 <input type="text" id="secretDreamRound1" data-secret-round="1" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
                             </label>
@@ -778,7 +742,7 @@
                                         <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход</th>
+                                        <th>Доход / Остаток</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound1Assets"></tbody>
@@ -896,7 +860,6 @@
                 <!-- Круг 2 -->
                 <article class="secret-sheet secret-sd2" id="secretSheet2" data-round="2">
                     <header class="secret-sheet-header">
-                        <div class="sheet-code">СД-2</div>
                         <div class="sheet-header-grid">
                             <label class="sheet-field">
                                 <span>Игрок</span>
@@ -906,7 +869,7 @@
                                 <span>Профессия</span>
                                 <input type="text" id="secretProfessionRound2" readonly>
                             </label>
-                            <label class="sheet-field">
+                            <label class="sheet-field dream-field">
                                 <span>Ваша мечта</span>
                                 <input type="text" id="secretDreamRound2" data-secret-round="2" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
                             </label>
@@ -923,7 +886,7 @@
                                         <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход</th>
+                                        <th>Доход / Остаток</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound2Assets"></tbody>
@@ -1041,7 +1004,6 @@
                 <!-- Круг 3 -->
                 <article class="secret-sheet secret-sd2" id="secretSheet3" data-round="3">
                     <header class="secret-sheet-header">
-                        <div class="sheet-code">СД-2</div>
                         <div class="sheet-header-grid">
                             <label class="sheet-field">
                                 <span>Игрок</span>
@@ -1051,7 +1013,7 @@
                                 <span>Профессия</span>
                                 <input type="text" id="secretProfessionRound3" readonly>
                             </label>
-                            <label class="sheet-field">
+                            <label class="sheet-field dream-field">
                                 <span>Ваша мечта</span>
                                 <input type="text" id="secretDreamRound3" data-secret-round="3" data-secret-section="info" data-secret-field="dream" placeholder="Опишите мечту">
                             </label>
@@ -1068,7 +1030,7 @@
                                         <th>Наименование</th>
                                         <th>Цена</th>
                                         <th>Кол-во</th>
-                                        <th>Доход</th>
+                                        <th>Доход / Остаток</th>
                                     </tr>
                                 </thead>
                                 <tbody id="secretRound3Assets"></tbody>
@@ -1156,6 +1118,21 @@
                                     </label>
                                 </div>
                             </section>
+                            <section class="secret-goals-panel" id="secretGoalsPanel">
+                                <header>Цели победы</header>
+                                <div class="secret-goals-grid">
+                                    <article class="secret-goal-card" id="secretPassiveGoalCard">
+                                        <h4>Пассивный доход до ₽2 000 000</h4>
+                                        <p class="goal-progress" id="secretPassiveGoalProgress">₽0 / ₽2 000 000</p>
+                                        <button type="button" id="secretPassiveGoalButton" onclick="confirmSecretPassiveGoal()" disabled>Подтвердить цель</button>
+                                    </article>
+                                    <article class="secret-goal-card dream" id="secretDreamGoalCard">
+                                        <h4>Мечта игрока</h4>
+                                        <p class="goal-dream-text" id="secretDreamGoalText">—</p>
+                                        <button type="button" id="secretDreamGoalButton" onclick="confirmSecretDreamGoal()" disabled>Подтвердить мечту</button>
+                                    </article>
+                                </div>
+                            </section>
                             <footer class="panel-footer">
                                 <span>Итого расходы</span>
                                 <strong>₽<span id="secretRound3ExpenseTotal">0</span></strong>
@@ -1184,6 +1161,19 @@
                     </section>
                 </article>
             </section>
+            <div class="secret-goal-notice" id="secretGoalNotice">
+                <div class="secret-goal-message">
+                    <h4>Отличный прогресс!</h4>
+                    <p id="secretGoalNoticeMessage">Продолжайте выполнение условий, чтобы победить.</p>
+                </div>
+            </div>
+            <div class="secret-victory-banner" id="secretVictoryBanner">
+                <div class="secret-victory-text">
+                    <h4>Поздравляем! Обе цели достигнуты.</h4>
+                    <p>Через несколько секунд станет доступен финальный отчёт.</p>
+                </div>
+                <button class="report-button" id="secretReportButton" onclick="showSecretReport()" disabled>Перейти к отчету</button>
+            </div>
         </div>
     </div>
 
