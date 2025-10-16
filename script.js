@@ -2376,13 +2376,13 @@ function addExpense() {
     showModal('Ошибка', 'Введите корректную сумму расхода');
     return;
   }
-  
-  if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств в кошельке');
+
+  const index = gameData.additionalExpenses.findIndex(expense => expense.id === id);
+  if (index === -1) {
     return;
   }
-  
-  gameData.wallet -= amount;
+
+  const [removed] = gameData.additionalExpenses.splice(index, 1);
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -4907,6 +4907,10 @@ function syncSecretInfoFields() {
   if (headerProfession) {
     headerProfession.textContent = profession || '—';
   }
+  if (round === 3) {
+    return 'Пассивный доход достиг ₽300 000. Добро пожаловать в круг олигархов! Планируйте крупные активы и шаги к мечте.';
+  }
+  return '';
 }
 
 function handleSecretFieldInput(event) {
