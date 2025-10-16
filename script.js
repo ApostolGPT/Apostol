@@ -2246,21 +2246,35 @@ function addIncome() {
   showModal('Доход добавлен', `+$${formattedAmount}${note ? ` (${note})` : ''}`);
 }
 
-function addExpense() {
-  const amount = parseFloat(document.getElementById('transactionAmount').value);
-  const note = document.getElementById('transactionNote').value;
-  
+function recordLoanPayment(index, amount) {
+  const loan = gameData.loans[index];
+  if (!loan) {
+    return;
+  }
+
   if (!amount || amount <= 0) {
-    showModal('Ошибка', 'Введите корректную сумму расхода');
+    showModal('Ошибка', 'Введите сумму платежа по кредиту.');
     return;
   }
-  
+
   if (amount > gameData.wallet) {
-    showModal('Ошибка', 'Недостаточно средств в кошельке');
+    showModal('Ошибка', 'Недостаточно средств для платежа.');
     return;
   }
-  
-  gameData.wallet -= amount;
+
+  const payment = Math.min(amount, loan.remaining);
+  gameData.wallet -= payment;
+  loan.remaining = Math.max(0, loan.remaining - payment);
+  loan.paid += payment;
+
+  if (loan.remaining <= 0.01) {
+    loan.remaining = 0;
+    gameData.loans.splice(index, 1);
+    showModal('Кредит закрыт', 'Обязательные платежи по этому кредиту больше не удерживаются.');
+  } else {
+    showModal('Платеж по кредиту', `-$${payment.toLocaleString()}`);
+  }
+
   updateCashFlowDisplay();
 
   // Очистить поля
@@ -4109,6 +4123,8 @@ function setSecretRound(round, options = {}) {
   if (!options.silent) {
     saveGameData();
   }
+
+  return null;
 }
 
 function syncSecretInfoFields() {

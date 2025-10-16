@@ -1095,7 +1095,103 @@ body {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
-  color: var(--primary-color);
+}
+
+.ledger-controls .expense-btn {
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 100%);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.ledger-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ledger-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(226, 232, 240, 0.4);
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.ledger-item.expense {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.ledger-item.salary {
+  background: rgba(56, 189, 248, 0.2);
+  color: #0369a1;
+}
+
+@media (max-width: 1024px) {
+  .secret-money-game {
+    padding: 24px;
+  }
+
+  .secret-header {
+    align-items: flex-start;
+  }
+
+  .secret-title {
+    text-align: left;
+  }
+
+  .profession-chip {
+    align-items: flex-start;
+  }
+
+  .secret-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .secret-money-game {
+    padding: 20px;
+  }
+
+  .secret-title h1 {
+    font-size: 1.8rem;
+  }
+
+  .secret-sheet-header {
+    flex-direction: column;
+  }
+
+  .sheet-code {
+    width: 72px;
+    height: 72px;
+    font-size: 1.2rem;
+  }
+
+  .secret-totals-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .round-tab {
+    font-size: 0.95rem;
+  }
+
+  .overview-card {
+    padding: 18px;
+  }
+
+  .secret-sheet {
+    padding: 20px;
+  }
 }
 
 .loan-details {
